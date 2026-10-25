@@ -1,0 +1,54 @@
+{
+  "name": "Seismos Indonesia",
+  "short_name": "Seismos ID",
+  "description": "Pemantauan gempa bumi Indonesia dari data terbuka BMKG/InaTEWS, peta dan jarak episenter, notifikasi wilayah, seismograf perangkat, dan seismogram gunung api MAGMA/PVMBG.",
+  "lang": "id",
+  "dir": "ltr",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#F4F6FA",
+  "theme_color": "#163E78",
+  "categories": ["news", "weather", "education"],
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Gempa terbaru",
+      "short_name": "Riwayat",
+      "url": "/history",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Peta gempa",
+      "short_name": "Peta",
+      "url": "/map",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Seismogram gunung api",
+      "short_name": "Gunung",
+      "url": "/volcano-seismogram",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    }
+  ]
+}

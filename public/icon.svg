@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="Seismos Indonesia">
+  <rect width="512" height="512" rx="108" fill="#163E78"/>
+  <g stroke="#FFFFFF" stroke-opacity="0.10" stroke-width="2">
+    <path d="M64 128h384M64 192h384M64 256h384M64 320h384M64 384h384"/>
+    <path d="M128 64v384M192 64v384M256 64v384M320 64v384M384 64v384"/>
+  </g>
+  <path d="M54 260h78l30-78 48 172 44-122 34 76 28-48h142" fill="none" stroke="#F2A93B" stroke-width="26" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
