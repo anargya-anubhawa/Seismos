@@ -7,6 +7,7 @@ import {
   Attribution, EventRow, LoadingNotice, PageTitle, Panel, Skeleton, StaleDataNotice, StateBox,
 } from '@/components/ui/common';
 import { QuakeMapLazy } from '@/components/map/QuakeMapLazy';
+import { MmiSummary } from '@/components/mmi/MmiSummary';
 
 const inputCls = 'rounded-md border border-line bg-surface px-2.5 py-1.5 text-sm';
 
@@ -64,26 +65,31 @@ export default function MapPage() {
         <p className="ml-auto text-sm text-muted" aria-live="polite">{events.length} dari {data.events.length} kejadian</p>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <Panel className="h-[55vh] overflow-hidden lg:col-span-2 lg:h-[calc(100vh-14rem)]">
-          <QuakeMapLazy events={events} selectedId={selected} onSelect={setSelected} />
-        </Panel>
-        <Panel title="Daftar kejadian" className="lg:h-[calc(100vh-14rem)] lg:overflow-hidden">
-          {sel && (
-            <div className="border-b border-line bg-accent/10 px-4 py-2 text-sm">
-              Dipilih: <strong>M {sel.magnitude.toFixed(1)}</strong> — {sel.region}.{' '}
-              <Link className="font-medium underline" href={`/event/${encodeURIComponent(sel.id)}`}>Buka detail</Link>
-            </div>
-          )}
-          {events.length === 0 ? (
-            <p className="p-4 text-sm text-muted">Tidak ada kejadian yang cocok dengan filter. Ubah atau reset filter.</p>
-          ) : (
-            <ul className="max-h-96 overflow-y-auto lg:max-h-[calc(100vh-19rem)]">
-              {events.map((q) => <EventRow key={q.id} q={q} active={q.id === selected} onSelect={setSelected} />)}
-            </ul>
-          )}
-        </Panel>
+      <div className="flex flex-col gap-4">
+        <div className="order-1 grid gap-4 lg:order-2 lg:grid-cols-3">
+          <Panel className="relative z-0 h-[55dvh] overflow-hidden lg:col-span-2 lg:h-[calc(100dvh-14rem)]">
+            <QuakeMapLazy events={events} selectedId={selected} onSelect={setSelected} />
+          </Panel>
+          <Panel title="Daftar kejadian" className="lg:h-[calc(100vh-14rem)] lg:overflow-hidden">
+            {sel && (
+              <div className="border-b border-line bg-accent/10 px-4 py-2 text-sm">
+                Dipilih: <strong>M {sel.magnitude.toFixed(1)}</strong> — {sel.region}.{' '}
+                <Link className="font-medium underline" href={`/event/${encodeURIComponent(sel.id)}`}>Buka detail</Link>
+              </div>
+            )}
+            {events.length === 0 ? (
+              <p className="p-4 text-sm text-muted">Tidak ada kejadian yang cocok dengan filter. Ubah atau reset filter.</p>
+            ) : (
+              <ul className="max-h-96 overflow-y-auto lg:max-h-[calc(100vh-19rem)]">
+                {events.map((q) => <EventRow key={q.id} q={q} active={q.id === selected} onSelect={setSelected} />)}
+              </ul>
+            )}
+          </Panel>
+        </div>
+
+        <MmiSummary events={events} className="order-2 min-w-0 lg:order-1" />
       </div>
+
       <Attribution />
     </>
   );

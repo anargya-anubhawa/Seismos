@@ -93,7 +93,7 @@ export function Panel({
   headingLevel?: 'h2' | 'h3';
 }) {
   return (
-    <section className={`rounded-lg border border-line bg-surface ${className}`}>
+    <section className={`min-w-0 rounded-lg border border-line bg-surface ${className}`}>
       {title && <Heading className="border-b border-line px-4 py-2.5 text-sm font-semibold">{title}</Heading>}
       {children}
     </section>

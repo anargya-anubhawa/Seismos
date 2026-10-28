@@ -222,8 +222,8 @@ export default function AboutPage() {
         <h2 className="text-lg font-semibold">Privasi dan keamanan</h2>
         <p className="mt-1 max-w-3xl text-sm text-muted">
           Penjelasan berikut mengikuti perilaku aplikasi saat ini, bukan jaminan keamanan menyeluruh.
-          Fitur lokasi, notifikasi, alarm, dan suara sensor bersifat opsional dan dikendalikan dari
-          browser Anda.
+          Bagian ini membahas lokasi GPS, pemuatan peta dan sumber eksternal, serta praktik keamanan
+          yang diterapkan aplikasi.
         </p>
         <div className="mt-3 grid gap-3 md:grid-cols-2">
           {PRIVACY.map((item) => (

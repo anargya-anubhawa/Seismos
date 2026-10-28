@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/common';
 import { NotificationSummary } from '@/components/notifications/NotificationSettings';
 import { QuakeMapLazy } from '@/components/map/QuakeMapLazy';
+import { MmiSummary } from '@/components/mmi/MmiSummary';
 
 export default function DashboardPage() {
   const { data, loading, error } = useEarthquakes();
@@ -85,6 +86,8 @@ export default function DashboardPage() {
           ) : <p className="mt-1 text-sm">Belum ada kejadian.</p>}
         </Panel>
       </div>
+
+      <MmiSummary events={events} className="mt-4 min-w-0" />
 
       <div className="mt-4 grid w-full min-w-0 grid-cols-1 gap-4 xl:grid-cols-5">
         <Panel title="Persebaran episenter" className="overflow-hidden xl:col-span-3">

@@ -7,7 +7,7 @@ import { useEarthquakes } from '@/hooks/useEarthquakes';
 import { fmtAgo, fmtTime } from '@/lib/formatting';
 import { BMKG_SHAKEMAP_BASE } from '@/lib/constants';
 import {
-  Attribution, LoadingNotice, MagBadge, PageTitle, Panel, Skeleton, StaleDataNotice, StateBox,
+  Attribution, LoadingNotice, MagBadge, MmiBadge, PageTitle, Panel, Skeleton, StaleDataNotice, StateBox,
 } from '@/components/ui/common';
 import { QuakeMapLazy } from '@/components/map/QuakeMapLazy';
 
@@ -74,6 +74,7 @@ export default function EventPage({ params }: { params: { id: string } }) {
     ['Koordinat', `${q.latitude.toFixed(2)}, ${q.longitude.toFixed(2)}`],
     ['Lokasi', q.region],
   ];
+  const feltReports = q.feltReports ?? [];
 
   return (
     <>
@@ -97,11 +98,53 @@ export default function EventPage({ params }: { params: { id: string } }) {
               <dt className="w-32 shrink-0 text-muted">Potensi tsunami</dt>
               <dd>{q.tsunamiNote ?? 'Tidak ada pernyataan di data ini'}</dd>
             </div>
+            {q.maxMmi ? (
+              <div className="flex gap-3 border-b border-line py-2">
+                <dt className="w-32 shrink-0 text-muted">MMI dilaporkan</dt>
+                <dd className="flex flex-wrap items-center gap-2">
+                  <MmiBadge mmi={q.maxMmi} />
+                  <span className="text-xs text-muted">
+                    dari {feltReports.length || 1} lokasi
+                  </span>
+                </dd>
+              </div>
+            ) : null}
             <div className="flex gap-3 py-2">
               <dt className="w-32 shrink-0 text-muted">Dirasakan</dt>
               <dd>{q.felt ?? 'Tidak ada keterangan di data ini'}</dd>
             </div>
           </dl>
+          {feltReports.length > 0 && (
+            <div className="border-t border-line px-4 py-3">
+              <p className="text-sm font-medium">Rincian intensitas MMI</p>
+              <p className="mt-1 text-xs text-muted">
+                Diurutkan dari intensitas tertinggi. Nilai diurai dari teks
+                “Dirasakan” BMKG, bukan estimasi seluruh wilayah.
+              </p>
+              <ul className="mt-2 grid gap-2 sm:grid-cols-2">
+                {feltReports.map((report) => (
+                  <li
+                    key={`${report.place}-${report.mmiMin}-${report.mmiMax}`}
+                    className="flex min-w-0 items-start gap-2 rounded-md border border-line px-2.5 py-2"
+                  >
+                    <MmiBadge
+                      mmi={report.mmiMax}
+                      label={report.mmiLabel}
+                      compact
+                    />
+                    <span className="min-w-0 break-words text-sm">
+                      {report.place}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-2 text-xs text-muted">
+                Aplikasi tidak menghitung estimasi MMI sendiri. Intensitas di
+                lokasi lain dapat berbeda dan tidak ditampilkan tanpa laporan
+                resmi.
+              </p>
+            </div>
+          )}
           <div className="space-y-1 border-t border-line px-4 py-3 text-xs text-muted">
             <p>Dihitung aplikasi (bukan dari BMKG): konversi waktu ke WIB dan selisih “{fmtAgo(q.originTime)}”.</p>
             <p>Muncul di daftar BMKG: {q.sources.map((s) => SOURCE_LABEL[s]).join(', ')}.</p>

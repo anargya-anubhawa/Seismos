@@ -157,9 +157,9 @@ export function Shell({ children }: { children: ReactNode }) {
         </div>
       </header>
 
-      <main className="px-4 pb-24 pt-5 md:px-6 md:pb-8">{children}</main>
+      <main className="px-4 pb-[calc(6rem+env(safe-area-inset-bottom))] pt-5 md:px-6 md:pb-8">{children}</main>
 
-      <nav aria-label="Menu utama" className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-6 border-t border-line bg-surface md:hidden">
+      <nav aria-label="Menu utama" className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-6 border-t border-line bg-surface pb-[env(safe-area-inset-bottom)] md:hidden">
         {PRIMARY.map(({ href, short, icon: Icon }) => (
           <Link
             key={href}
@@ -185,7 +185,7 @@ export function Shell({ children }: { children: ReactNode }) {
       </nav>
 
       {moreOpen && (
-        <div className="fixed inset-x-0 bottom-14 top-0 z-40 md:hidden" role="presentation" onClick={() => setMoreOpen(false)}>
+        <div className="fixed inset-x-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] top-0 z-40 md:hidden" role="presentation" onClick={() => setMoreOpen(false)}>
           <div aria-hidden className="absolute inset-0 bg-black/40" />
           <div
             id="menu-lainnya"

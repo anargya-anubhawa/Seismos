@@ -8,7 +8,7 @@ import { useEarthquakes } from '@/hooks/useEarthquakes';
 import { earthquakesToCsv, downloadText } from '@/lib/csv';
 import { fmtTime, wibDate } from '@/lib/formatting';
 import {
-  Attribution, EventRow, LoadingNotice, MagBadge, PageTitle, Skeleton, StaleDataNotice, StateBox,
+  Attribution, EventRow, LoadingNotice, MagBadge, MmiBadge, PageTitle, Skeleton, StaleDataNotice, StateBox,
 } from '@/components/ui/common';
 
 type Sort = 'time-desc' | 'time-asc' | 'mag-desc' | 'depth-desc' | 'depth-asc';
@@ -148,7 +148,7 @@ function HistoryInner() {
                   <th className="px-2 py-2.5 font-medium">Kedalaman</th>
                   <th className="px-2 py-2.5 font-medium">Lokasi</th>
                   <th className="px-2 py-2.5 font-medium">Koordinat</th>
-                  <th className="px-2 py-2.5 font-medium">Dirasakan</th>
+                  <th className="px-2 py-2.5 font-medium">MMI dilaporkan</th>
                   <th className="px-4 py-2.5"><span className="sr-only">Aksi</span></th>
                 </tr>
               </thead>
@@ -160,7 +160,22 @@ function HistoryInner() {
                     <td className="whitespace-nowrap px-2 py-2.5">{q.depthKm} km</td>
                     <td className="px-2 py-2.5">{q.region}</td>
                     <td className="whitespace-nowrap px-2 py-2.5 text-muted">{q.latitude.toFixed(2)}, {q.longitude.toFixed(2)}</td>
-                    <td className="px-2 py-2.5">{q.felt ? 'Ya' : '—'}</td>
+                    <td className="px-2 py-2.5">
+                      {q.maxMmi ? (
+                        <div className="flex items-center gap-2">
+                          <MmiBadge mmi={q.maxMmi} compact />
+                          <span className="whitespace-nowrap text-xs text-muted">
+                            {q.feltReports?.length ?? 1} lokasi
+                          </span>
+                        </div>
+                      ) : q.felt ? (
+                        <span className="text-xs text-muted" title={q.felt}>
+                          Teks laporan
+                        </span>
+                      ) : (
+                        '—'
+                      )}
+                    </td>
                     <td className="px-4 py-2.5"><Link className="font-medium underline" href={`/event/${encodeURIComponent(q.id)}`}>Detail</Link></td>
                   </tr>
                 ))}

@@ -7,6 +7,7 @@ import { Home, Loader2, LocateFixed } from 'lucide-react';
 import type { Earthquake } from '@/types/earthquake';
 import { MAG_CLASSES, fmtTime, magColor } from '@/lib/formatting';
 import { distanceKm, formatDistanceKm } from '@/lib/geo';
+import { mmiRoman } from '@/lib/felt';
 import { useGeolocation } from '@/hooks/useGeolocation';
 
 const INDONESIA: L.LatLngBoundsExpression = [[-11.5, 94], [6.5, 141.5]];
@@ -90,7 +91,7 @@ export default function QuakeMap({ events, selectedId, onSelect, highlightLatest
       pop.append(title, place, when);
       if (q.maxMmi) {
         const mmi = document.createElement('div');
-        mmi.textContent = `Dirasakan hingga MMI ${q.maxMmi}`;
+        mmi.textContent = `Dirasakan hingga MMI ${mmiRoman(q.maxMmi)}`;
         pop.append(mmi);
       }
       if (location) {
@@ -206,7 +207,7 @@ export default function QuakeMap({ events, selectedId, onSelect, highlightLatest
   const locationLabel = location ? 'Perbarui lokasi saya' : 'Tampilkan lokasi saya';
 
   return (
-    <div className="relative h-full w-full">
+    <div className="relative z-0 h-full w-full">
       <div ref={host} className="h-full w-full" role="application" aria-label="Peta persebaran episenter gempa" />
 
       <div className="absolute right-2 top-2 z-[500] flex max-w-[calc(100%-1rem)] flex-col items-end gap-2">
