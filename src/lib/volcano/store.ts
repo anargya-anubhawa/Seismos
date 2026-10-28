@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto';
-import { open, readFile, rename, stat, unlink } from 'node:fs/promises';
+import { open, mkdir, chmod, readFile, rename, stat, unlink } from 'node:fs/promises';
 import path from 'node:path';
 import type { VolcanoNotification } from '@/types/volcano';
 import { StorageUnavailableError, createMemoryStore, createStorageProbe } from '../storage';
@@ -170,13 +170,19 @@ async function atomicWriteFile(target: string, value: unknown): Promise<void> {
 }
 
 async function acquireFileLock(name: string): Promise<() => Promise<void>> {
-  try {
-    await ensureDataDir();
-  } catch (error) {
-    if (!(error instanceof StorageUnavailableError)) throw error;
-    return async () => { /* tidak ada kunci berkas */ };
-  }
   const target = lockPath(name);
+  try {
+    // Direktori induk kunci bisa belum ada (mis. pemakaian pertama di server
+    // baru). Buat dulu agar `open(..., 'wx')` tidak gagal ENOENT.
+    await mkdir(path.dirname(target), { recursive: true, mode: 0o700 });
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code && ['EROFS', 'ENOENT', 'EACCES', 'EPERM', 'ENOTDIR'].includes(code)) {
+      // Sistem berkas baca-saja: antrean dalam proses sudah cukup.
+      return async () => { /* tidak ada kunci berkas */ };
+    }
+    throw error;
+  }
   const started = Date.now();
   while (Date.now() - started < LOCK_WAIT_MS) {
     try {
@@ -365,9 +371,16 @@ export async function loadVapidKeys(): Promise<StoredVapidKeys | null> {
 export async function saveVapidKeys(keys: StoredVapidKeys): Promise<void> {
   const payload = `${JSON.stringify(keys, null, 2)}\n`;
   try {
-    await ensureDataDir();
+    // Berkas kunci bersama berada di direktori tsunami, yang bisa berbeda dari
+    // direktori gunung api. Pastikan direktori induknya dibuat, bukan hanya
+    // direktori DATA_DIR, agar penulisan tidak gagal ENOENT.
+    await mkdir(path.dirname(SHARED_VAPID_FILE), { recursive: true, mode: 0o700 });
+    await chmod(path.dirname(SHARED_VAPID_FILE), 0o700).catch(() => { /* abaikan */ });
   } catch (error) {
-    if (!(error instanceof StorageUnavailableError)) throw error;
+    const code = (error as NodeJS.ErrnoException).code;
+    if (!(error instanceof StorageUnavailableError) && !(code && ['EROFS', 'ENOENT', 'EACCES', 'EPERM', 'ENOTDIR'].includes(code))) {
+      throw error;
+    }
     // Tanpa disk, kunci hanya hidup di memori instance ini. Kunci yang sama
     // berlaku untuk tsunami dan gunung api, jadi langganan push tetap cocok
     // selama instance hidup. Agar stabil antarinstance, set VAPID_PUBLIC_KEY

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { addBasemap } from '@/lib/map/basemap';
 import type { VolcanoLevel } from '@/types/volcano';
 
 const INDONESIA: L.LatLngBoundsExpression = [[-11.5, 94], [6.5, 141.5]];
@@ -39,7 +40,7 @@ export default function VolcanoMap({ volcanoes, selectedCode, onSelect }: Props)
   const host = useRef<HTMLDivElement>(null);
   const map = useRef<L.Map | null>(null);
   const group = useRef<L.LayerGroup | null>(null);
-  const markers = useRef(new Map<string, L.CircleMarker>());
+  const markers = useRef(new Map<string, L.Marker>());
   const onSelectRef = useRef(onSelect);
   onSelectRef.current = onSelect;
 
@@ -51,10 +52,7 @@ export default function VolcanoMap({ volcanoes, selectedCode, onSelect }: Props)
   useEffect(() => {
     if (!host.current || map.current) return;
     const m = L.map(host.current, { minZoom: 3 }).fitBounds(INDONESIA);
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 18,
-      attribution: '&copy; kontributor OpenStreetMap',
-    }).addTo(m);
+    addBasemap(m, { satellite: true });
     group.current = L.layerGroup().addTo(m);
     map.current = m;
     const store = markers.current;
@@ -72,12 +70,25 @@ export default function VolcanoMap({ volcanoes, selectedCode, onSelect }: Props)
     g.clearLayers();
     markers.current.clear();
     for (const volcano of volcanoes) {
-      const marker = L.circleMarker([volcano.latitude, volcano.longitude], {
-        radius: volcano.level >= 3 ? 8 : 6,
-        color: '#0B1A2E',
-        weight: 1,
-        fillColor: VOLCANO_COLOR[volcano.level],
-        fillOpacity: 0.85,
+      // Ikon gunung api (bukan titik lingkaran) agar cepat dikenali di peta.
+      // Warna puncak mengikuti tingkat aktivitas resmi; ukuran sedikit lebih
+      // besar pada tingkat tinggi supaya perhatian tertuju ke sana.
+      const size = volcano.level >= 3 ? 30 : 26;
+      const marker = L.marker([volcano.latitude, volcano.longitude], {
+        icon: L.divIcon({
+          className: 'volcano-marker',
+          html: `<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true" focusable="false">`
+            + '<path d="M8.5 3.2 12 8.3 14.2 6l7.3 14.5H2.5z" fill="none" stroke="#0B1A2E" stroke-width="1.4" stroke-linejoin="round"/>'
+            + `<path d="M17.1 14.2h3.9L23 20.5H1L3.3 14.2h3.4a3.2 3.2 0 0 0 6.4 0h0a3.2 3.2 0 0 0 4 0z" fill="${VOLCANO_COLOR[volcano.level]}" stroke="#0B1A2E" stroke-width="1.2" stroke-linejoin="round"/>`
+            + '<path d="M12 4.6 13.1 6.6 12.3 7.6 11.2 6.8z" fill="#ffffff" stroke="#0B1A2E" stroke-width="0.8"/>'
+            + '</svg>',
+          iconSize: [size, size],
+          iconAnchor: [size / 2, size],
+          popupAnchor: [0, -size],
+        }),
+        keyboard: true,
+        title: `Gunung ${volcano.name}`,
+        alt: `Gunung ${volcano.name}`,
       });
       // Popup dibangun dengan textContent agar teks sumber tidak menyisipkan markup.
       const popup = document.createElement('div');
@@ -98,8 +109,14 @@ export default function VolcanoMap({ volcanoes, selectedCode, onSelect }: Props)
   useEffect(() => {
     markers.current.forEach((marker, code) => {
       const isSelected = code === selectedCode;
-      marker.setStyle({ weight: isSelected ? 3 : 1, color: isSelected ? '#ffffff' : '#0B1A2E' });
-      if (isSelected) marker.bringToFront();
+      const element = marker.getElement();
+      if (element) {
+        element.classList.toggle('volcano-marker-selected', isSelected);
+        element.style.filter = isSelected ? 'drop-shadow(0 0 4px rgba(255,255,255,0.95))' : '';
+        element.style.zIndex = isSelected ? '1000' : '';
+      }
+      if (isSelected) marker.setZIndexOffset(1000);
+      else marker.setZIndexOffset(0);
     });
   }, [selectedCode, volcanoes]);
 

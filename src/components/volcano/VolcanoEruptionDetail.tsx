@@ -8,6 +8,7 @@ import { useVolcanoQuery } from '@/hooks/useVolcano';
 import type { EruptionEvent } from '@/types/volcano';
 import { VolcanoLink } from './parts';
 import { Disclaimer, OfflineNotice, VolcanoEmpty, VolcanoErrorBox, VolcanoPage } from './layout';
+import { eruptionReportText } from '@/lib/share/report-text';
 
 /** Detail satu informasi letusan (VEN) resmi beserta rekomendasi. */
 export function VolcanoEruptionDetail({ id }: { id: string }) {
@@ -43,6 +44,16 @@ export function VolcanoEruptionDetail({ id }: { id: string }) {
       title={`Informasi Letusan — ${event.volcanoName}`}
       hint={`Kejadian ${fmtTime(event.occurredAt)} (${fmtAgo(event.occurredAt)})`}
       updatedAt={query.updatedAt}
+      shareTitle={`Informasi Letusan Gunung ${event.volcanoName} — Seismos Indonesia`}
+      reportText={eruptionReportText(event)}
+      attachments={event.imagePath
+        ? [{
+            fileName: `letusan-${event.volcanoCode.toLowerCase()}-${event.id}.png`,
+            url: event.imagePath,
+            type: 'image/png',
+            label: 'Gambar letusan resmi',
+          }]
+        : []}
     >
       <OfflineNotice offline={query.offline} />
 

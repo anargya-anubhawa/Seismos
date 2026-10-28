@@ -8,6 +8,7 @@ import { fmtTime } from '@/lib/formatting';
 import { useVolcanoQuery } from '@/hooks/useVolcano';
 import type { VolcanoReportPayload } from '@/types/volcano-ui';
 import { ReportCard, VolcanoLevelBadge, VolcanoLink } from './parts';
+import { LoadMoreButton, useProgressiveList } from './progressive';
 import { Disclaimer, OfflineNotice, VolcanoEmpty, VolcanoErrorBox, VolcanoPage } from './layout';
 
 /**
@@ -28,6 +29,8 @@ export function VolcanoReportList({ kind }: { kind: 'aktivitas' | 'harian' }) {
     if (!term) return reports;
     return reports.filter((report) => `${report.volcanoName} ${report.volcanoCode} ${report.date}`.toLowerCase().includes(term));
   }, [reports, search]);
+
+  const list = useProgressiveList(filtered, { resetKey: `${search.trim().toLowerCase()}|${date}` });
 
   const title = kind === 'harian' ? 'Laporan Harian Gunung Api' : 'Laporan Aktivitas Gunung Api';
   const hint = kind === 'harian'
@@ -99,7 +102,7 @@ export function VolcanoReportList({ kind }: { kind: 'aktivitas' | 'harian' }) {
         ) : (
           <Panel>
             <ul className="divide-y divide-line">
-              {filtered.map((report) => (
+              {list.visible.map((report) => (
                 <li key={report.id} className="flex flex-wrap items-center gap-2 px-4 py-2.5">
                   <div className="min-w-0 flex-1">
                     <VolcanoLink code={report.volcanoCode} name={report.volcanoName} />
@@ -118,6 +121,15 @@ export function VolcanoReportList({ kind }: { kind: 'aktivitas' | 'harian' }) {
                 </li>
               ))}
             </ul>
+            <LoadMoreButton
+              hasMore={list.hasMore}
+              nextCount={list.nextCount}
+              shown={list.shown}
+              total={filtered.length}
+              onLoadMore={list.showMore}
+              label="laporan"
+              divided
+            />
           </Panel>
         )
       ) : filtered.length === 0 ? (
@@ -126,9 +138,20 @@ export function VolcanoReportList({ kind }: { kind: 'aktivitas' | 'harian' }) {
           laporan terbaru.
         </VolcanoEmpty>
       ) : (
-        <div className="grid gap-3 lg:grid-cols-2">
-          {filtered.map((report) => <ReportCard key={report.id} report={report} />)}
-        </div>
+        <>
+          <div className="grid gap-3 lg:grid-cols-2">
+            {list.visible.map((report) => <ReportCard key={report.id} report={report} />)}
+          </div>
+          <LoadMoreButton
+            hasMore={list.hasMore}
+            nextCount={list.nextCount}
+            shown={list.shown}
+            total={filtered.length}
+            onLoadMore={list.showMore}
+            label="laporan"
+            className="mt-3 rounded-lg border border-line bg-surface"
+          />
+        </>
       )}
 
       <p className="mt-3 text-xs text-muted">

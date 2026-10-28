@@ -108,7 +108,15 @@ export function VolcanoOverview() {
       )}
 
       <div className="grid gap-4 lg:grid-cols-3">
-        <Panel title={level ? `Gunung api ${VOLCANO_LEVELS.find((l) => l.level === level)?.label}` : 'Daftar gunung api'} className="lg:col-span-2">
+        {/*
+          `self-start` penting: tanpa itu panel daftar ikut meregang setinggi
+          kolom samping (letusan + VONA) sehingga muncul ruang kosong besar di
+          bawah tombol "Muat". Dengan `self-start`, panel setinggi isinya saja.
+        */}
+        <Panel
+          title={level ? `Gunung api ${VOLCANO_LEVELS.find((l) => l.level === level)?.label}` : 'Daftar gunung api'}
+          className="self-start lg:col-span-2"
+        >
           {volcanoes.length === 0 ? (
             <div className="px-4 py-4">
               <VolcanoEmpty title="Tidak ada gunung api pada tingkat ini">

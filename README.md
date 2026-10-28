@@ -1,6 +1,6 @@
 # Seismos Indonesia
 
-Pemantauan gempa bumi Indonesia dan peringatan tsunami resmi BMKG/InaTEWS, peta episenter dengan lokasi pengguna, notifikasi dan alarm per wilayah, push tsunami, mitigasi, serta seismogram live gunung api dari MAGMA Indonesia (PVMBG). **Versi 1.0.0** — rilis 25 Oktober 2026.
+Pemantauan gempa bumi Indonesia dan peringatan tsunami resmi BMKG/InaTEWS, peta episenter dengan lokasi pengguna, notifikasi dan alarm per wilayah, push tsunami, mitigasi, serta seismogram live gunung api dari MAGMA Indonesia (PVMBG). **Versi 2.0.0** — rilis 25 Oktober 2026.
 
 > **Bukan sistem peringatan dini resmi.** Untuk keputusan keselamatan, rujuk BMKG (bmkg.go.id, inatews.bmkg.go.id) dan PVMBG (magma.esdm.go.id). Jangan menunggu notifikasi aplikasi.
 
@@ -35,7 +35,7 @@ Butuh Node.js 18.17+ dan akses internet: server memanggil BMKG dan MAGMA, peta m
 | Mitigasi | Tindakan sebelum/saat/setelah gempa, panduan tsunami, tas siaga, kontak darurat, tabel MMI, tautan resmi BMKG. Tetap dapat dibuka lewat tautan di Pengaturan |
 | Pengaturan | Izin notifikasi gempa, cakupan peringatan, **area seluruh Indonesia atau provinsi sekitar lokasi**, pilihan bunyi dan volume alarm, tes suara, **push tsunami terpisah**, **tautan pengaturan push gunung api**, tema terang/gelap/ikuti sistem, hapus sesi sensor, tautan panduan |
 | Notifikasi & alarm | Notifikasi Web + alarm audio untuk gempa saat halaman terbuka dan data BMKG memuat gempa baru. Pilihan bunyi tiga nada, lonceng, sirine, atau denyut; volume dapat diatur. Cakupan “gempa penting” (M≥5,0 atau dirasakan) sebagai bawaan, atau semua gempa. Filter provinsi opsional; ini bukan push latar belakang untuk gempa (push tsunami memakai jalur terpisah) |
-| Tentang | Tujuan dan cakupan aplikasi, sumber data terintegrasi vs tautan referensi, perilaku privasi, versi `1.0.0`, tanggal rilis 25 Oktober 2026, pengembang, repositori publik, kontak Instagram, dan lisensi MIT |
+| Tentang | Tujuan dan cakupan aplikasi, sumber data terintegrasi vs tautan referensi, perilaku privasi, versi `2.0.0`, tanggal rilis 25 Oktober 2026, pengembang, repositori publik, kontak Instagram, dan lisensi MIT |
 | PWA | Manifest, ikon 192/512/maskable, apple-touch-icon, service worker di produksi (cache shell; **tidak** menyimpan `/api`), penerima push tsunami dan gunung api, dan pembukaan detail dari klik notifikasi |
 
 Tema, status koneksi, waktu pengambilan, serta atribusi sumber ada di halaman terkait. Navigasi desktop memakai sidebar; navigasi mobile memakai lima menu utama (Beranda, Peta, Riwayat, **Tsunami**, **Gunung Berapi**) + “Lainnya”. Menu **Pengaturan** dan **Tentang Seismos Indonesia** tersedia di sidebar dan menu “Lainnya”.

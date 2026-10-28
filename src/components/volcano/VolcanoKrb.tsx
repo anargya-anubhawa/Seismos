@@ -2,12 +2,18 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
-import { Download, ExternalLink, FileText, Maximize2, Search, X } from 'lucide-react';
+import { Download, ExternalLink, Maximize2, Search, X } from 'lucide-react';
 import { LoadingNotice, Panel, Skeleton } from '@/components/ui/common';
 import { fmtTime } from '@/lib/formatting';
 import { useVolcanoQuery } from '@/hooks/useVolcano';
 import type { KrbMap } from '@/types/volcano';
 import type { VolcanoKrbPayload } from '@/types/volcano-ui';
+import { DeferredImage } from './DeferredImage';
+import { LoadMoreButton, useProgressiveList } from './progressive';
+import { krbDetailHref } from './links';
+import { CopyMiniReport } from '@/components/share/CopyMiniReport';
+import { ShareMenu } from '@/components/share/ShareActions';
+import { krbText } from '@/lib/share/report-text';
 import { SourceImage } from './parts';
 import { Disclaimer, OfflineNotice, VolcanoEmpty, VolcanoErrorBox, VolcanoPage } from './layout';
 
@@ -86,6 +92,7 @@ export function VolcanoKrb() {
       .sort((a, b) => a.volcanoName.localeCompare(b.volcanoName, 'id'));
   }, [maps, term]);
   const open = maps.find((map) => map.id === openId) ?? null;
+  const list = useProgressiveList(filtered, { resetKey: term.trim().toLowerCase() });
 
   if (query.loading && !query.data) {
     return (
@@ -141,43 +148,67 @@ export function VolcanoKrb() {
           MAGMA tidak menyertakan gunung api ini pada daftar peta KRB, atau pencarian tidak menemukan hasil.
         </VolcanoEmpty>
       ) : (
-        <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {filtered.map((map) => (
-            <li key={map.id} className="overflow-hidden rounded-lg border border-line bg-surface">
-              <div className="flex items-start justify-between gap-2 px-3 py-2.5">
-                <div className="min-w-0">
-                  <h2 className="truncate text-sm font-semibold">{map.volcanoName}</h2>
-                  <p className="mt-0.5 truncate text-xs text-muted">
-                    {map.year ? `Peta ${map.year}` : 'Tahun tidak tercantum'}
-                    {map.fileSize ? ` · ${(map.fileSize / 1_000_000).toFixed(1)} MB` : ''}
-                  </p>
-                </div>
-                <FileText size={16} aria-hidden className="shrink-0 text-muted" />
-              </div>
-              <button
-                type="button"
-                onClick={() => setOpenId(map.id)}
-                className="block w-full border-y border-line bg-white"
-                aria-label={`Buka peta KRB Gunung ${map.volcanoName}`}
-              >
-                <SourceImage
-                  src={map.imagePath}
-                  alt={`Pratinjau peta KRB Gunung ${map.volcanoName}`}
-                  className="block aspect-[4/3] w-full object-cover"
-                  caption="Berkas besar; pratinjau dapat memakan waktu"
-                />
-              </button>
-              <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-xs">
-                <Link href={`/gunung-berapi/${map.volcanoName.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`} className="font-medium text-accent underline">
-                  Detail gunung api
-                </Link>
-                <button type="button" onClick={() => setOpenId(map.id)} className="inline-flex min-h-8 items-center gap-1 rounded-md border border-line px-2 font-medium">
-                  <Maximize2 size={12} aria-hidden /> Perbesar
-                </button>
-              </div>
+        <>
+          <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {list.visible.map((map) => (
+            <li key={map.id}>
+              <DeferredImage
+                title={`Gunung ${map.volcanoName}`}
+                meta={[
+                  map.year ? `Peta ${map.year}` : 'Tahun tidak tercantum',
+                  map.fileSize ? `${(map.fileSize / 1_000_000).toFixed(1)} MB` : null,
+                ].filter(Boolean).join(' · ')}
+                alt={`Peta Kawasan Rawan Bencana Gunung ${map.volcanoName} dari PVMBG`}
+                src={map.imagePath}
+                buttonLabel="Buka peta"
+                imageClassName="mx-auto block max-h-[80vh] w-full object-contain"
+                actions={(
+                  <div className="space-y-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <Link href={krbDetailHref(map)} className="font-medium text-accent underline">
+                        Detail gunung api
+                      </Link>
+                      <div className="flex flex-wrap gap-2">
+                        <button type="button" onClick={() => setOpenId(map.id)} className="inline-flex min-h-8 items-center gap-1 rounded-md border border-line px-2 font-medium">
+                          <Maximize2 size={12} aria-hidden /> Layar penuh
+                        </button>
+                        <a href={map.downloadPath} className="inline-flex min-h-8 items-center gap-1 rounded-md border border-line px-2 font-medium">
+                          <Download size={12} aria-hidden /> Unduh
+                        </a>
+                      </div>
+                    </div>
+                    {/* Peta KRB adalah dokumen utamanya, jadi ikut bisa disalin/dibagikan. */}
+                    <div className="flex flex-wrap items-center gap-2 border-t border-line pt-2">
+                      <CopyMiniReport text={krbText(map)} label={`Salin info peta KRB Gunung ${map.volcanoName}`} />
+                      <ShareMenu
+                        title={`Peta KRB Gunung ${map.volcanoName} — Seismos Indonesia`}
+                        text={krbText(map)}
+                        label="Kirim ke…"
+                        compact
+                        attachments={[{
+                          fileName: `krb-${(map.volcanoCode || map.volcanoName).toLowerCase()}.jpg`,
+                          url: map.imagePath,
+                          type: 'image/jpeg',
+                          label: 'Berkas peta KRB (gambar)',
+                        }]}
+                      />
+                    </div>
+                  </div>
+                )}
+              />
             </li>
           ))}
         </ul>
+          <LoadMoreButton
+            hasMore={list.hasMore}
+            nextCount={list.nextCount}
+            shown={list.shown}
+            total={filtered.length}
+            onLoadMore={list.showMore}
+            label="peta"
+            className="mt-3 rounded-lg border border-line bg-surface"
+          />
+        </>
       )}
 
       <p className="mt-3 text-xs text-muted">

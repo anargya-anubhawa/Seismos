@@ -7,6 +7,7 @@ import { useVolcanoQuery } from '@/hooks/useVolcano';
 import type { VolcanoCamera } from '@/types/volcano';
 import type { VolcanoCameraPayload } from '@/types/volcano-ui';
 import { CameraGallery } from './parts';
+import { LoadMoreButton, useProgressiveList } from './progressive';
 import { Disclaimer, OfflineNotice, VolcanoEmpty, VolcanoErrorBox, VolcanoPage } from './layout';
 
 const ageHours = (capturedAt: string | null): number | null => {
@@ -44,6 +45,8 @@ export function VolcanoCameras() {
     }
     return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name, 'id'));
   }, [cameras, search, freshOnly]);
+
+  const cameraList = useProgressiveList(grouped, { resetKey: `${search.trim().toLowerCase()}|${freshOnly}` });
 
   if (query.loading && !query.data) {
     return (
@@ -123,13 +126,22 @@ export function VolcanoCameras() {
         </VolcanoEmpty>
       ) : (
         <div className="space-y-5">
-          {grouped.map((group) => (
+          {cameraList.visible.map((group) => (
             <Panel key={group.code} title={`Gunung ${group.name} (${group.cameras.length} kamera)`}>
               <div className="px-3 py-3">
                 <CameraGallery cameras={group.cameras} label={`${group.name} — MAGMA`} />
               </div>
             </Panel>
           ))}
+          <LoadMoreButton
+            hasMore={cameraList.hasMore}
+            nextCount={cameraList.nextCount}
+            shown={cameraList.shown}
+            total={grouped.length}
+            onLoadMore={cameraList.showMore}
+            label="gunung api"
+            className="rounded-lg border border-line bg-surface"
+          />
         </div>
       )}
 

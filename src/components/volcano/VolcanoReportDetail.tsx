@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { ArrowLeft, ArrowRight, ExternalLink } from 'lucide-react';
 import { LoadingNotice, Panel } from '@/components/ui/common';
 import { fmtAgo, fmtTime } from '@/lib/formatting';
+import { reportText } from '@/lib/share/report-text';
 import { useVolcanoQuery } from '@/hooks/useVolcano';
 import type { VolcanoReport } from '@/types/volcano';
 import { SourceImage, VolcanoLevelBadge, VolcanoLink } from './parts';
@@ -54,6 +55,16 @@ export function VolcanoReportDetail({ id, kind }: { id: string; kind: 'aktivitas
       title={`Laporan ${report.kind === 'harian' ? 'Harian' : 'Aktivitas'} — ${report.volcanoName}`}
       hint={`Periode ${report.date}${report.period ? ` · ${report.period}` : ''}${report.timeZone ? ` (${report.timeZone})` : ''}`}
       updatedAt={query.updatedAt}
+      shareTitle={`Laporan ${report.kind === 'harian' ? 'Harian' : 'Aktivitas'} Gunung ${report.volcanoName} — Seismos Indonesia`}
+      reportText={reportText(report)}
+      attachments={report.visualImagePath
+        ? [{
+            fileName: `visual-${report.volcanoCode.toLowerCase()}-${report.date}.png`,
+            url: report.visualImagePath,
+            type: 'image/png',
+            label: 'Gambar pengamatan visual resmi',
+          }]
+        : []}
     >
       <OfflineNotice offline={query.offline} />
 

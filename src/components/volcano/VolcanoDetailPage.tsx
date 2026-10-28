@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { LoadingNotice, Panel, Skeleton } from '@/components/ui/common';
 import { fmtAgo, fmtTime } from '@/lib/formatting';
+import { reportText, volcanoStatusText } from '@/lib/share/report-text';
 import { useVolcanoQuery } from '@/hooks/useVolcano';
 import type { VolcanoDetail } from '@/types/volcano';
 import {
@@ -70,6 +71,18 @@ export function VolcanoDetailPage({ code }: { code: string }) {
       hint={`${volcano.province} · Kode MAGMA ${volcano.code}`}
       updatedAt={data?.updatedAt}
       errors={errors}
+      shareTitle={`Status Gunung ${volcano.name} — Seismos Indonesia`}
+      reportText={data?.latestReport
+        ? reportText(data.latestReport)
+        : volcanoStatusText(volcano)}
+      attachments={data?.latestReport?.visualImagePath
+        ? [{
+            fileName: `visual-${volcano.code.toLowerCase()}-${data.latestReport.date}.png`,
+            url: data.latestReport.visualImagePath,
+            type: 'image/png',
+            label: 'Gambar pengamatan visual (laporan terbaru)',
+          }]
+        : []}
     >
       <OfflineNotice offline={query.offline} />
 

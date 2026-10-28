@@ -3,11 +3,13 @@
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import {
-  ArrowLeft, Check, Clock, ExternalLink, MapPin, Share2, TriangleAlert, Waves,
+  ArrowLeft, Clock, ExternalLink, MapPin, TriangleAlert, Waves,
 } from 'lucide-react';
 import { fmtTime } from '@/lib/formatting';
+import { tsunamiReportText } from '@/lib/share/report-text';
 import type { TsunamiAlert, TsunamiSourceStatus } from '@/types/tsunami';
 import { PageTitle, Panel, Skeleton, StateBox } from '@/components/ui/common';
+import { CopyLinkButton, CopyReportButton, ShareMenu } from '@/components/share/ShareActions';
 import {
   TsunamiAlertHeader, TsunamiEtaNotice, TsunamiObservationList, TsunamiRegionList,
   TsunamiSafetyGuidance, TsunamiSourceStatusList, TsunamiUpdateTimeline,
@@ -47,7 +49,6 @@ export function TsunamiDetail({ id }: { id: string }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notFound, setNotFound] = useState(false);
-  const [copied, setCopied] = useState(false);
 
   const load = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
@@ -80,16 +81,6 @@ export function TsunamiDetail({ id }: { id: string }) {
     }, 60_000);
     return () => window.clearInterval(timer);
   }, [load]);
-
-  const share = async () => {
-    try {
-      await navigator.clipboard.writeText(window.location.href);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 2_000);
-    } catch {
-      setCopied(false);
-    }
-  };
 
   const back = (
     <Link href="/tsunami" className="mb-3 inline-flex items-center gap-1.5 text-sm font-medium underline">
@@ -133,6 +124,17 @@ export function TsunamiDetail({ id }: { id: string }) {
   const { alert } = detail;
   const active = alert.status === 'active';
   const potentialDiffers = alert.potential && alert.potential !== alert.headline && alert.potential !== alert.description;
+  const alertText = tsunamiReportText({
+    subject: alert.subject,
+    issueTime: alert.issueTime,
+    status: active ? 'AKTIF' : 'BERAKHIR',
+    phase: alert.phase,
+    region: alert.region,
+    magnitude: alert.magnitude,
+    depthKm: alert.depthKm,
+    potential: alert.potential,
+    instructions: alert.instructions,
+  });
 
   return (
     <>
@@ -142,11 +144,21 @@ export function TsunamiDetail({ id }: { id: string }) {
           title={active ? 'Peringatan tsunami aktif' : 'Peringatan tsunami berakhir'}
           hint={`${alert.subject} · ${alert.sourceName}`}
         />
-        <div className="flex gap-2">
-          <button type="button" onClick={() => void share()} className="inline-flex min-h-9 items-center gap-1.5 rounded-md border border-line px-3 text-sm font-medium">
-            {copied ? <Check size={15} aria-hidden /> : <Share2 size={15} aria-hidden />}
-            {copied ? 'Tautan disalin' : 'Salin tautan'}
-          </button>
+        <div className="flex flex-wrap gap-2">
+          <CopyLinkButton />
+          <CopyReportButton text={alertText} />
+          <ShareMenu
+            title={`Peringatan Tsunami — ${alert.subject}`}
+            text={alertText}
+            attachments={alert.maps.shakemap
+              ? [{
+                  fileName: `shakemap-tsunami-${alert.id}.png`,
+                  url: alert.maps.shakemap,
+                  type: 'image/png',
+                  label: 'Shakemap gempa pemicu (BMKG)',
+                }]
+              : []}
+          />
           <a href={alert.sourceUrl} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-9 items-center gap-1.5 rounded-md border border-line px-3 text-sm font-medium">
             <ExternalLink size={15} aria-hidden /> Sumber BMKG
           </a>

@@ -8,6 +8,7 @@ import { fmtTime } from '@/lib/formatting';
 import { useVolcanoQuery } from '@/hooks/useVolcano';
 import type { VolcanoEruptionPayload } from '@/types/volcano-ui';
 import { VolcanoLink } from './parts';
+import { LoadMoreButton, useProgressiveList } from './progressive';
 import { Disclaimer, OfflineNotice, VolcanoEmpty, VolcanoErrorBox, VolcanoPage } from './layout';
 
 /** Riwayat informasi letusan resmi (VEN) — bukan riwayat perubahan tingkat. */
@@ -25,6 +26,8 @@ export function VolcanoEruptionList() {
       return `${event.volcanoName} ${event.volcanoCode} ${event.province ?? ''}`.toLowerCase().includes(term);
     });
   }, [eruptions, search, date]);
+
+  const list = useProgressiveList(filtered, { resetKey: `${search.trim().toLowerCase()}|${date}` });
 
   if (query.loading && !query.data) {
     return (
@@ -85,7 +88,7 @@ export function VolcanoEruptionList() {
       ) : (
         <Panel>
           <ul className="divide-y divide-line">
-            {filtered.map((event) => (
+            {list.visible.map((event) => (
               <li key={event.id} className="px-4 py-3">
                 <div className="flex flex-wrap items-center gap-2">
                   <VolcanoLink code={event.volcanoCode} name={event.volcanoName} />
@@ -107,6 +110,15 @@ export function VolcanoEruptionList() {
               </li>
             ))}
           </ul>
+          <LoadMoreButton
+            hasMore={list.hasMore}
+            nextCount={list.nextCount}
+            shown={list.shown}
+            total={filtered.length}
+            onLoadMore={list.showMore}
+            label="informasi letusan"
+            divided
+          />
         </Panel>
       )}
 

@@ -1,11 +1,57 @@
 import assert from 'node:assert/strict';
+import os from 'node:os';
+import path from 'node:path';
 import test from 'node:test';
+import { rm } from 'node:fs/promises';
 import {
   detectLevelChanges, eruptionCandidate, levelLabel, normalizeCamera, normalizeEruption, normalizeGalleryPhoto,
   normalizeKrb, normalizeLevelChange, normalizeReport, normalizeVona, normalizeVolcanoStatuses, parseVolcanoLevel,
   seismogramsForVolcano, volcanoSlug, vonaCandidate, type LevelObservation,
 } from '../src/lib/volcano/magma';
 import { normalizeTopics } from '../src/lib/volcano/push';
+import { LIST_INITIAL_COUNT, progressiveSlice } from '../src/lib/volcano/paging';
+import { loadVapidKeys, saveVapidKeys, withVolcanoLock } from '../src/lib/volcano/store';
+
+/* ----------------------------------------------------- daftar bertahap -- */
+
+// Semua menu gunung api memakai batas 10 entri yang sama. Ini menjaga agar
+// daftar 69 gunung api tidak memanjang penuh dan tombol "Muat" selalu muncul
+// hanya bila memang masih ada sisa.
+test('progressiveSlice menampilkan 10 entri lalu bertambah 10', () => {
+  const items = Array.from({ length: 69 }, (_, i) => i);
+  assert.equal(LIST_INITIAL_COUNT, 10);
+
+  const first = progressiveSlice(items, LIST_INITIAL_COUNT);
+  assert.equal(first.visible.length, 10);
+  assert.equal(first.shown, 10);
+  assert.equal(first.remaining, 59);
+  assert.equal(first.nextCount, 10);
+  assert.equal(first.hasMore, true);
+
+  const second = progressiveSlice(items, LIST_INITIAL_COUNT * 2);
+  assert.equal(second.visible.length, 20);
+  assert.equal(second.remaining, 49);
+
+  // Langkah terakhir tidak boleh meminta lebih dari sisa.
+  const last = progressiveSlice(items, 65);
+  assert.equal(last.nextCount, 4);
+  assert.equal(last.hasMore, true);
+
+  const done = progressiveSlice(items, 69);
+  assert.equal(done.hasMore, false);
+  assert.equal(done.nextCount, 0);
+});
+
+test('progressiveSlice tidak menampilkan tombol untuk daftar pendek atau kosong', () => {
+  const short = progressiveSlice([1, 2, 3], LIST_INITIAL_COUNT);
+  assert.equal(short.visible.length, 3);
+  assert.equal(short.hasMore, false);
+
+  const empty = progressiveSlice<number>([], LIST_INITIAL_COUNT);
+  assert.equal(empty.visible.length, 0);
+  assert.equal(empty.hasMore, false);
+  assert.equal(empty.nextCount, 0);
+});
 
 /* ------------------------------------------------------------------ level -- */
 
@@ -298,3 +344,25 @@ test('normalizeTopics bersifat idempoten untuk nilai yang dikirim balik', () => 
   assert.deepEqual(normalizeTopics(first, 'default'), first);
 });
 
+
+/* -------------------------------------------- penyimpanan tingkat berkas -- */
+
+// Regresi: pemakaian pertama pada direktori yang belum ada sebelumnya gagal
+// ENOENT karena kunci dan berkas VAPID berada di direktori berbeda. Keduanya
+// kini membuat direktori induknya sendiri.
+test('saveVapidKeys dan withVolcanoLock bekerja saat direktori data belum ada', async () => {
+  const dir = path.join(os.tmpdir(), `seismos-volcano-${Date.now()}`);
+  process.env.VOLCANO_DATA_DIR = path.join(dir, 'volcano');
+  process.env.TSUNAMI_DATA_DIR = path.join(dir, 'tsunami');
+  try {
+    const keys = { publicKey: 'BPublic'.repeat(10), privateKey: 'Priv'.repeat(12), createdAt: new Date().toISOString() };
+    await saveVapidKeys(keys);
+    const loaded = await loadVapidKeys();
+    assert.equal(loaded?.publicKey, keys.publicKey);
+
+    const value = await withVolcanoLock('probe', async () => 42);
+    assert.equal(value, 42);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});

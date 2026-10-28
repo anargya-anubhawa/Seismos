@@ -1,14 +1,15 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
-import { ArrowLeft, Share2 } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { useEarthquakes } from '@/hooks/useEarthquakes';
 import { fmtAgo, fmtTime } from '@/lib/formatting';
 import { BMKG_SHAKEMAP_BASE } from '@/lib/constants';
+import { SOURCE_BMKG, earthquakeReportText } from '@/lib/share/report-text';
 import {
   Attribution, LoadingNotice, MagBadge, MmiBadge, PageTitle, Panel, Skeleton, StaleDataNotice, StateBox,
 } from '@/components/ui/common';
+import { ShareActions } from '@/components/share/ShareActions';
 import { QuakeMapLazy } from '@/components/map/QuakeMapLazy';
 
 const SOURCE_LABEL = {
@@ -21,7 +22,6 @@ const SOURCE_LABEL = {
 
 export default function EventPage({ params }: { params: { id: string } }) {
   const { data, loading, error } = useEarthquakes();
-  const [copied, setCopied] = useState<'ok' | 'fail' | null>(null);
   let id = params.id;
   try { id = decodeURIComponent(params.id); } catch { /* pakai apa adanya */ }
 
@@ -62,11 +62,6 @@ export default function EventPage({ params }: { params: { id: string } }) {
       </>
     );
   }
-
-  const share = async () => {
-    try { await navigator.clipboard.writeText(window.location.href); setCopied('ok'); }
-    catch { setCopied('fail'); }
-  };
 
   const rows: [string, string][] = [
     ['Waktu kejadian', fmtTime(q.originTime)],
@@ -150,14 +145,18 @@ export default function EventPage({ params }: { params: { id: string } }) {
             <p>Muncul di daftar BMKG: {q.sources.map((s) => SOURCE_LABEL[s]).join(', ')}.</p>
             <p>Dampak, kerusakan, atau korban tidak ditampilkan karena data terbuka BMKG ini tidak memuatnya.</p>
           </div>
-          <div className="flex items-center gap-3 border-t border-line px-4 py-3">
-            <button onClick={share} className="flex items-center gap-1.5 rounded-md border border-line px-3 py-1.5 text-sm hover:bg-line/40">
-              <Share2 size={15} aria-hidden /> Salin tautan
-            </button>
-            <span className="text-sm" aria-live="polite">
-              {copied === 'ok' && 'Tautan disalin.'}
-              {copied === 'fail' && 'Tidak dapat menyalin. Salin dari bilah alamat.'}
-            </span>
+          <div className="border-t border-line px-4 py-3">
+            <ShareActions
+              source={SOURCE_BMKG}
+              reportText={earthquakeReportText(q, { pageUrl: typeof window !== 'undefined' ? window.location.href : undefined })}
+              shareTitle={`Info Gempa M ${q.magnitude.toFixed(1)} — ${q.region}`}
+              attachments={q.shakemapFile ? [{
+                fileName: `shakemap-${q.id.replace(/[^a-z0-9]+/gi, '-')}.png`,
+                url: `${BMKG_SHAKEMAP_BASE}${encodeURIComponent(q.shakemapFile)}`,
+                type: 'image/png',
+                label: `Shakemap BMKG (M ${q.magnitude.toFixed(1)})`,
+              }] : []}
+            />
           </div>
         </Panel>
 

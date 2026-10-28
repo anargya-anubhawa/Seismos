@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import {
-  AlertTriangle, Camera, ChevronLeft, ChevronRight, Clock, ExternalLink, ImageOff, Maximize2, Mountain, X,
+  AlertTriangle, Camera, ChevronLeft, ChevronRight, Clock, Eye, ExternalLink, ImageOff, Maximize2, Mountain, X,
 } from 'lucide-react';
 import { fmtTime } from '@/lib/formatting';
 import { levelLabel } from '@/lib/volcano/magma';
@@ -189,25 +189,9 @@ export function CameraCard({
   showVolcano?: boolean;
 }) {
   const host = useRef<HTMLLIElement | null>(null);
-  const [visible, setVisible] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   const age = cameraAge(camera.capturedAt);
   const toneClass = age.tone === 'ok' ? 'text-ok' : age.tone === 'warn' ? 'text-[#8A6A00] dark:text-[#F2C14E]' : 'text-danger';
-
-  useEffect(() => {
-    const element = host.current;
-    if (!element) return;
-    if (typeof IntersectionObserver === 'undefined') { setVisible(true); return; }
-    const observer = new IntersectionObserver((entries) => {
-      for (const entry of entries) {
-        if (entry.isIntersecting) {
-          setVisible(true);
-          observer.disconnect();
-        }
-      }
-    }, { rootMargin: '200px' });
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, []);
 
   return (
     <li ref={host} className="overflow-hidden rounded-lg border border-line bg-surface">
@@ -222,10 +206,29 @@ export function CameraCard({
         </div>
         <span className={`shrink-0 text-[10px] font-semibold uppercase tracking-wide ${toneClass}`}>{age.tone === 'ok' ? 'Baru' : age.tone === 'warn' ? 'Tertunda' : 'Lama'}</span>
       </div>
-      <button type="button" onClick={onOpen} className="block w-full border-y border-line bg-white" aria-label={`Perbesar kamera ${camera.station} di ${camera.volcanoName}`}>
-        {visible
-          ? <SourceImage src={camera.imagePath} alt={`Gambar kamera ${camera.station} Gunung ${camera.volcanoName} dari MAGMA`} className="block aspect-video w-full object-cover" caption={camera.capturedAt ? fmtTime(camera.capturedAt) : undefined} />
-          : <div className="aspect-video w-full animate-pulse bg-line/40" aria-hidden />}
+      {/*
+        Snapshot kamera tidak diunduh otomatis: satu gunung api bisa punya
+        beberapa kamera dan setiap gambar berukuran besar. Pengguna harus
+        menekan tombol dulu, sehingga halaman CCTV tetap ringan.
+      */}
+      <button
+        type="button"
+        onClick={onOpen}
+        className="flex aspect-video w-full flex-col items-center justify-center gap-1.5 border-y border-line bg-bg/60 text-xs font-medium text-muted hover:bg-line/30 hover:text-ink"
+        aria-label={`Muat dan perbesar kamera ${camera.station} di ${camera.volcanoName}`}
+      >
+        {loaded ? (
+          <>
+            <Eye size={20} aria-hidden />
+            <span>Buka gambar</span>
+          </>
+        ) : (
+          <>
+            <Camera size={20} aria-hidden />
+            <span>Gambar belum dimuat</span>
+            <span className="text-[11px] font-normal">Tekan untuk memuat snapshot</span>
+          </>
+        )}
       </button>
       <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-xs">
         <span className={`inline-flex items-center gap-1 ${toneClass}`}>
@@ -297,6 +300,51 @@ export function CameraGallery({ cameras, label }: { cameras: VolcanoCamera[]; la
   );
 }
 
+/**
+ * Satu ubin galeri. Thumbnail tidak diunduh otomatis karena galeri dapat
+ * memuat puluhan foto sekaligus; pengguna menekan "Muat foto" dulu. Setelah
+ * gambar tampil, menekannya membuka tampilan penuh.
+ */
+function PhotoTile({ photo, onOpen }: { photo: GalleryPhoto; onOpen: () => void }) {
+  const [shown, setShown] = useState(false);
+  const label = photo.visualDate ? `Visual ${photo.visualDate}` : 'Tanggal visual tidak tercantum';
+
+  return (
+    <div className="overflow-hidden rounded-lg border border-line bg-surface">
+      {shown ? (
+        <button
+          type="button"
+          onClick={onOpen}
+          className="block w-full bg-white"
+          aria-label={`Buka foto dokumentasi visual ${photo.volcanoName}${photo.visualDate ? ` tanggal ${photo.visualDate}` : ''}`}
+        >
+          <SourceImage
+            eager
+            src={photo.imagePath}
+            alt={`Dokumentasi visual Gunung ${photo.volcanoName}`}
+            className="block aspect-[5/3] w-full object-contain"
+            onLoadState={() => undefined}
+          />
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setShown(true)}
+          className="flex aspect-[5/3] w-full flex-col items-center justify-center gap-1 bg-bg/60 text-[11px] font-medium text-muted hover:bg-line/30 hover:text-ink"
+          aria-label={`Muat foto dokumentasi visual ${photo.volcanoName}`}
+        >
+          <Camera size={18} aria-hidden />
+          <span>Muat foto</span>
+        </button>
+      )}
+      <div className="px-2 py-1.5">
+        <span className="block truncate text-xs font-semibold">{photo.volcanoName}</span>
+        <span className="block text-[11px] text-muted">{label}</span>
+      </div>
+    </div>
+  );
+}
+
 export function GalleryGrid({ photos }: { photos: GalleryPhoto[] }) {
   const [index, setIndex] = useState<number | null>(null);
   const current = index === null ? null : photos[index] ?? null;
@@ -305,22 +353,7 @@ export function GalleryGrid({ photos }: { photos: GalleryPhoto[] }) {
       <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
         {photos.map((photo, i) => (
           <li key={photo.id}>
-            <button
-              type="button"
-              onClick={() => setIndex(i)}
-              className="group block w-full overflow-hidden rounded-lg border border-line bg-surface text-left"
-              aria-label={`Buka foto dokumentasi visual ${photo.volcanoName}${photo.visualDate ? ` tanggal ${photo.visualDate}` : ''}`}
-            >
-              <span className="block bg-white">
-                <SourceImage src={photo.imagePath} alt={`Dokumentasi visual Gunung ${photo.volcanoName}`} className="block aspect-[5/3] w-full object-contain" />
-              </span>
-              <span className="block px-2 py-1.5">
-                <span className="block truncate text-xs font-semibold">{photo.volcanoName}</span>
-                <span className="block text-[11px] text-muted">
-                  {photo.visualDate ? `Visual ${photo.visualDate}` : 'Tanggal visual tidak tercantum'}
-                </span>
-              </span>
-            </button>
+            <PhotoTile photo={photo} onOpen={() => setIndex(i)} />
           </li>
         ))}
       </ul>

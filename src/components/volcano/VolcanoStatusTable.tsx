@@ -9,6 +9,7 @@ import { VOLCANO_LEVELS } from '@/types/volcano';
 import type { VolcanoLevel } from '@/types/volcano';
 import type { VolcanoOverviewPayload } from '@/types/volcano-ui';
 import { VolcanoLevelBadge, VolcanoLink } from './parts';
+import { LoadMoreButton, useProgressiveList } from './progressive';
 import { Disclaimer, OfflineNotice, VolcanoEmpty, VolcanoErrorBox, VolcanoPage } from './layout';
 
 /** Tabel status aktivitas resmi seluruh gunung api yang dipantau. */
@@ -25,6 +26,10 @@ export function VolcanoStatusTable() {
       .filter((volcano) => term === '' || `${volcano.name} ${volcano.code} ${volcano.province}`.toLowerCase().includes(term))
       .sort((a, b) => b.level - a.level || a.name.localeCompare(b.name, 'id'));
   }, [volcanoes, level, search]);
+
+  // Tabel bisa berisi puluhan gunung api; tampilkan bertahap dan kembali ke
+  // 10 baris pertama setiap filter berubah.
+  const list = useProgressiveList(filtered, { resetKey: `${level ?? 'all'}|${search.trim().toLowerCase()}` });
 
   if (query.loading && !query.data) {
     return (
@@ -107,7 +112,7 @@ export function VolcanoStatusTable() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((volcano) => (
+                {list.visible.map((volcano) => (
                   <tr key={volcano.code} className="border-b border-line last:border-0">
                     <td className="px-3 py-2">
                       <VolcanoLink code={volcano.code} name={volcano.name} />
@@ -130,6 +135,15 @@ export function VolcanoStatusTable() {
               </tbody>
             </table>
           </div>
+          <LoadMoreButton
+            hasMore={list.hasMore}
+            nextCount={list.nextCount}
+            shown={list.shown}
+            total={filtered.length}
+            onLoadMore={list.showMore}
+            label="gunung api"
+            divided
+          />
           <p className="border-t border-line px-3 py-2 text-[11px] text-muted">
             Data diambil dari MAGMA pada {fmtTime(query.data.summary.updatedAt ?? new Date().toISOString())}. Status
             adalah tingkat aktivitas resmi PVMBG, bukan prakiraan erupsi.

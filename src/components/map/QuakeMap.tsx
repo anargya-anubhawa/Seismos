@@ -6,6 +6,7 @@ import 'leaflet/dist/leaflet.css';
 import { Home, Loader2, LocateFixed } from 'lucide-react';
 import type { Earthquake } from '@/types/earthquake';
 import { MAG_CLASSES, fmtTime, magColor } from '@/lib/formatting';
+import { addBasemap } from '@/lib/map/basemap';
 import { distanceKm, formatDistanceKm } from '@/lib/geo';
 import { mmiRoman } from '@/lib/felt';
 import { useGeolocation } from '@/hooks/useGeolocation';
@@ -47,10 +48,7 @@ export default function QuakeMap({ events, selectedId, onSelect, highlightLatest
   useEffect(() => {
     if (!host.current || map.current) return;
     const m = L.map(host.current, { minZoom: 3 }).fitBounds(INDONESIA);
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 18,
-      attribution: '&copy; kontributor OpenStreetMap',
-    }).addTo(m);
+    addBasemap(m, { satellite: true });
     group.current = L.layerGroup().addTo(m);
     locationGroup.current = L.layerGroup().addTo(m);
     distanceGroup.current = L.layerGroup().addTo(m);

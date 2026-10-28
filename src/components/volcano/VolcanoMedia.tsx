@@ -7,6 +7,7 @@ import { fmtTime } from '@/lib/formatting';
 import { useVolcanoQuery } from '@/hooks/useVolcano';
 import type { VolcanoGalleryPayload, VolcanoVonaPayload } from '@/types/volcano-ui';
 import { GalleryGrid, VonaBadge, VonaCard } from './parts';
+import { LoadMoreButton, useProgressiveList } from './progressive';
 import { Disclaimer, OfflineNotice, VolcanoEmpty, VolcanoErrorBox, VolcanoPage } from './layout';
 
 /** Gallery dokumentasi visual resmi MAGMA (visual pengamatan per gunung api). */
@@ -19,6 +20,7 @@ export function VolcanoGallery() {
   );
 
   const photos = useMemo(() => query.data?.photos ?? [], [query.data]);
+  const list = useProgressiveList(photos, { resetKey: search });
 
   if (query.loading && !query.data) {
     return (
@@ -88,8 +90,17 @@ export function VolcanoGallery() {
       ) : (
         <Panel>
           <div className="px-3 py-3">
-            <GalleryGrid photos={photos} />
+            <GalleryGrid photos={list.visible} />
           </div>
+          <LoadMoreButton
+            hasMore={list.hasMore}
+            nextCount={list.nextCount}
+            shown={list.shown}
+            total={photos.length}
+            onLoadMore={list.showMore}
+            label="foto"
+            divided
+          />
           <p className="border-t border-line px-3 py-2 text-[11px] text-muted">
             Diambil {fmtTime(query.data.updatedAt)} dari MAGMA Indonesia/PVMBG. Atribusi dan ketentuan penggunaan
             mengikuti sumber.
@@ -109,6 +120,7 @@ export function VolcanoGallery() {
 export function VolcanoVona() {
   const query = useVolcanoQuery<VolcanoVonaPayload>('/api/volcano/vona?size=40', { pollMs: 300_000 });
   const notices = useMemo(() => query.data?.notices ?? [], [query.data]);
+  const list = useProgressiveList(notices);
   const summary = useMemo(() => {
     const counts = { GREEN: 0, YELLOW: 0, ORANGE: 0, RED: 0 };
     for (const notice of notices) if (notice.currentCode) counts[notice.currentCode] += 1;
@@ -161,8 +173,17 @@ export function VolcanoVona() {
       ) : (
         <Panel>
           <ul className="space-y-2 px-3 py-3">
-            {notices.map((notice) => <VonaCard key={notice.id} notice={notice} />)}
+            {list.visible.map((notice) => <VonaCard key={notice.id} notice={notice} />)}
           </ul>
+          <LoadMoreButton
+            hasMore={list.hasMore}
+            nextCount={list.nextCount}
+            shown={list.shown}
+            total={notices.length}
+            onLoadMore={list.showMore}
+            label="VONA"
+            divided
+          />
         </Panel>
       )}
 

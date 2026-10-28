@@ -1,6 +1,6 @@
 {
   "name": "seismos-indonesia",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
   "description": "Pemantauan gempa bumi Indonesia dari data terbuka BMKG/InaTEWS, peta episenter, notifikasi wilayah, dan seismograf perangkat.",
   "license": "MIT",
@@ -15,7 +15,7 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "test": "sucrase-node scripts/test-felt.ts && sucrase-node scripts/test-sources.ts && sucrase-node scripts/test-alerts.ts && sucrase-node scripts/test-provinces.ts && sucrase-node scripts/test-audio.ts && sucrase-node scripts/test-tsunami.ts && sucrase-node scripts/test-volcano.ts"
+    "test": "sucrase-node scripts/test-felt.ts && sucrase-node scripts/test-sources.ts && sucrase-node scripts/test-alerts.ts && sucrase-node scripts/test-provinces.ts && sucrase-node scripts/test-audio.ts && sucrase-node scripts/test-tsunami.ts && sucrase-node scripts/test-volcano.ts && sucrase-node scripts/test-share.ts"
   },
   "dependencies": {
     "leaflet": "1.9.4",

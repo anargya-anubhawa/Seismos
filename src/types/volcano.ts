@@ -175,6 +175,12 @@ export interface KrbMap {
   id: string;
   volcanoId: string | null;
   volcanoName: string;
+  /**
+   * Kode gunung api resmi (mis. "LAM"), bila berhasil dicocokkan dengan daftar
+   * status. Dipakai untuk tautan detail karena slug dari nama tidak selalu sama
+   * dengan kode gunung api (mis. peta "Hobal" berkode "HOB", bukan "hobal").
+   */
+  volcanoCode?: string | null;
   year: string | null;
   description: string | null;
   /** Ukuran berkas menurut sumber (byte). */

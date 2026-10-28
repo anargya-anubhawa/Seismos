@@ -9,6 +9,7 @@ import { useTsunami } from '@/hooks/useTsunami';
 import { fmtTime } from '@/lib/formatting';
 import type { TsunamiFeed } from '@/types/tsunami';
 import { PageTitle, Panel, Skeleton, StateBox } from '@/components/ui/common';
+import { CopyLinkButton } from '@/components/share/ShareActions';
 import {
   TsunamiAlertCard, TsunamiSafetyGuidance, TsunamiSourceStatusList,
 } from '@/components/tsunami/parts';
@@ -126,15 +127,18 @@ export function TsunamiContent() {
           {data.checkedAt ? `Diperiksa ${fmtTime(data.checkedAt)}` : 'Belum ada pemeriksaan yang berhasil'}
           {data.updatedAt ? ` · data sumber ${fmtTime(data.updatedAt)}` : ''}
         </p>
-        <button
-          type="button"
-          onClick={() => void refreshNow()}
-          disabled={refreshing}
-          className="inline-flex min-h-9 items-center gap-1.5 rounded-md border border-line px-3 text-sm font-medium disabled:opacity-50"
-        >
-          {refreshing ? <Loader2 size={15} className="animate-spin" aria-hidden /> : <RefreshCw size={15} aria-hidden />}
-          {refreshing ? 'Memeriksa…' : 'Periksa sekarang'}
-        </button>
+        <div className="flex flex-wrap items-center gap-2 print:hidden">
+          <CopyLinkButton />
+          <button
+            type="button"
+            onClick={() => void refreshNow()}
+            disabled={refreshing}
+            className="inline-flex min-h-9 items-center gap-1.5 rounded-md border border-line px-3 text-sm font-medium disabled:opacity-50"
+          >
+            {refreshing ? <Loader2 size={15} className="animate-spin" aria-hidden /> : <RefreshCw size={15} aria-hidden />}
+            {refreshing ? 'Memeriksa…' : 'Periksa sekarang'}
+          </button>
+        </div>
       </div>
 
       <StatusBanner feed={data} />

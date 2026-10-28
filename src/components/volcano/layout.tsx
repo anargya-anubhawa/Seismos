@@ -3,6 +3,8 @@
 import Link from 'next/link';
 import { ExternalLink, Info, RefreshCw, WifiOff } from 'lucide-react';
 import { PageTitle } from '@/components/ui/common';
+import { CopyLinkButton, ShareMenu, type ShareAttachment } from '@/components/share/ShareActions';
+import { SOURCE_MAGMA } from '@/lib/share/report-text';
 import { fmtAgo, fmtTime } from '@/lib/formatting';
 import { VolcanoTabs } from './VolcanoTabs';
 
@@ -75,12 +77,19 @@ export function VolcanoPage({
   updatedAt,
   errors = [],
   children,
+  reportText,
+  shareTitle,
+  attachments = [],
 }: {
   title: string;
   hint?: string;
   updatedAt?: string | null;
   errors?: string[];
   children: React.ReactNode;
+  /** Teks laporan siap-salin; bila diisi, tombol salin & bagikan muncul. */
+  reportText?: string;
+  shareTitle?: string;
+  attachments?: ShareAttachment[];
 }) {
   return (
     <div className="min-w-0">
@@ -95,6 +104,16 @@ export function VolcanoPage({
         <Link href="/gunung-berapi/notifikasi" className="text-accent underline">
           Atur notifikasi
         </Link>
+      </div>
+      {/*
+        Aksi tautan & bagikan tersedia di setiap halaman gunung api agar pengguna
+        dapat meneruskan halaman/laporan tanpa menyalin dari bilah alamat.
+      */}
+      <div className="mb-4 flex flex-wrap items-center gap-2 print:hidden">
+        <CopyLinkButton />
+        {reportText && (
+          <ShareMenu title={shareTitle ?? title} text={reportText} attachments={attachments} />
+        )}
       </div>
       {errors.length > 0 && (
         <div role="status" className="mb-3 rounded-lg border border-[#C2711A]/50 bg-[#C2711A]/5 px-3 py-2 text-xs">

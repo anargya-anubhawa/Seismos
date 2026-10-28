@@ -37,6 +37,27 @@ body { background: rgb(var(--bg)); color: rgb(var(--ink)); font-feature-settings
 
 .leaflet-container { background: rgb(var(--line)); font: inherit; }
 
+/*
+ * Citra satelit Esri wajib menampilkan atribusi. Latar satelit gelap membuat
+ * teks bawaan Leaflet sulit dibaca, jadi atribusi diberi latar solid, ukuran
+ * lebih besar, dan warna kontras agar tetap jelas di semua peta.
+ */
+.leaflet-container .leaflet-control-attribution {
+  background: rgba(255, 255, 255, 0.94);
+  color: #1a1a1a;
+  font-size: 11px;
+  line-height: 1.45;
+  padding: 2px 6px;
+  border-radius: 4px 0 0 0;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+}
+
+.leaflet-container .leaflet-control-attribution a {
+  color: #0b4f9e;
+  font-weight: 600;
+  text-decoration: underline;
+}
+
 /* Penanda gempa terbaru: titik berdenyut dan outline lingkaran. */
 .quake-latest-pulse {
   background: transparent;

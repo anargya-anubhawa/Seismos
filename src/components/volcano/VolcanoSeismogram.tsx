@@ -8,6 +8,7 @@ import {
 import { LoadingNotice, Panel, Skeleton, StateBox } from '@/components/ui/common';
 import { fmtClock } from '@/lib/formatting';
 import type { SeismogramResponse, SeismogramStation } from '@/types/seismogram';
+import { LoadMoreButton, useProgressiveList } from './progressive';
 
 const POLL_MS = 5 * 60 * 1000;
 const inputCls = 'w-full rounded-md border border-line bg-surface px-2.5 py-1.5 text-sm';
@@ -247,12 +248,17 @@ export function VolcanoSeismogramView() {
   }, [volcanoGroups, q]);
 
   const selectedGroup = volcanoGroups.find((v) => v.name === selectedVolcano) ?? null;
-  const selectedStations = useMemo(
+  // Daftar pilihan bisa berisi puluhan gunung api; tampilkan bertahap agar
+  // halaman tidak memanjang, dan kembali ke 10 teratas saat kata kunci berubah.
+  const volcanoList = useProgressiveList(filteredVolcanoes, { resetKey: q.trim().toLowerCase() });  const selectedStations = useMemo(
     () => (data?.stations ?? [])
       .filter((s) => s.volcanoName === selectedVolcano)
       .sort((a, b) => a.scnl.localeCompare(b.scnl)),
     [data, selectedVolcano],
   );
+  // Setiap stasiun memuat gambar live; batasi 10 dulu agar tidak mengunduh
+  // puluhan gambar sekaligus saat gunung api dipilih.
+  const stationList = useProgressiveList(selectedStations, { resetKey: selectedVolcano ?? '' });
   const selected = data?.stations.find((s) => s.id === selectedId) ?? null;
 
   useEffect(() => {
@@ -386,7 +392,7 @@ export function VolcanoSeismogramView() {
               </div>
             ) : (
               <ul className="grid gap-2 p-3 sm:grid-cols-2 xl:grid-cols-3">
-                {filteredVolcanoes.map((v) => (
+                {volcanoList.visible.map((v) => (
                   <li key={v.name}>
                     <button
                       onClick={() => choose(v.name)}
@@ -410,6 +416,15 @@ export function VolcanoSeismogramView() {
                 ))}
               </ul>
             )}
+            <LoadMoreButton
+              hasMore={volcanoList.hasMore}
+              nextCount={volcanoList.nextCount}
+              shown={volcanoList.shown}
+              total={filteredVolcanoes.length}
+              onLoadMore={volcanoList.showMore}
+              label="gunung api"
+              divided
+            />
           </Panel>
 
           <div className="mt-4">
@@ -460,7 +475,7 @@ export function VolcanoSeismogramView() {
             </StateBox>
           ) : (
             <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              {selectedStations.map((s) => {
+              {stationList.visible.map((s) => {
                 const thumb = `/api/seismograms/${s.id}/image?size=thumb${stamp ? `&v=${stamp}` : ''}`;
                 return (
                   <li key={s.id} className="overflow-hidden rounded-lg border border-line bg-surface">
@@ -512,6 +527,15 @@ export function VolcanoSeismogramView() {
               })}
             </ul>
           )}
+          <LoadMoreButton
+            hasMore={stationList.hasMore}
+            nextCount={stationList.nextCount}
+            shown={stationList.shown}
+            total={selectedStations.length}
+            onLoadMore={stationList.showMore}
+            label="stasiun"
+            className="mt-3 rounded-lg border border-line bg-surface"
+          />
 
           <div className="mt-5">
             <SourcePanel />

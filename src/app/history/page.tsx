@@ -10,6 +10,9 @@ import { fmtTime, wibDate } from '@/lib/formatting';
 import {
   Attribution, EventRow, LoadingNotice, MagBadge, MmiBadge, PageTitle, Skeleton, StaleDataNotice, StateBox,
 } from '@/components/ui/common';
+import { CopyLinkButton } from '@/components/share/ShareActions';
+import { CopyMiniReport } from '@/components/share/CopyMiniReport';
+import { earthquakeReportText } from '@/lib/share/report-text';
 
 type Sort = 'time-desc' | 'time-asc' | 'mag-desc' | 'depth-desc' | 'depth-asc';
 const PAGE = 10;
@@ -92,6 +95,9 @@ function HistoryInner() {
         title="Riwayat Gempa"
         hint="Gabungan feed InaTEWS dan data terbuka BMKG saat ini; bukan arsip jangka panjang. Tanggal mengikuti WIB."
       />
+      <div className="mb-3 flex flex-wrap items-center gap-2 print:hidden">
+        <CopyLinkButton />
+      </div>
       <StaleDataNotice error={error} updatedAt={data.updatedAt} />
 
       <div className="grid gap-3 rounded-lg border border-line bg-surface p-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -176,7 +182,12 @@ function HistoryInner() {
                         '—'
                       )}
                     </td>
-                    <td className="px-4 py-2.5"><Link className="font-medium underline" href={`/event/${encodeURIComponent(q.id)}`}>Detail</Link></td>
+                    <td className="px-4 py-2.5">
+                      <div className="flex items-center gap-2">
+                        <Link className="font-medium underline" href={`/event/${encodeURIComponent(q.id)}`}>Detail</Link>
+                        <CopyMiniReport text={earthquakeReportText(q)} label={`Salin info gempa ${q.region}`} />
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>

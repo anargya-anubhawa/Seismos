@@ -2,9 +2,10 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { ExternalLink, Info, Monitor, Moon, Mountain, ShieldCheck, Sun, Trash2 } from 'lucide-react';
+import { ExternalLink, Info, Monitor, Moon, ShieldCheck, Sun, Trash2 } from 'lucide-react';
 import { NotificationSettings } from '@/components/notifications/NotificationSettings';
 import { TsunamiPushSettings } from '@/components/tsunami/TsunamiPushSettings';
+import { VolcanoPushSettings } from '@/components/volcano/VolcanoPushSettings';
 import { PageTitle, Panel } from '@/components/ui/common';
 import { applyTheme, getThemePreference, THEME_CHANGE_EVENT, type ThemePreference } from '@/lib/theme';
 import { clearSessions, loadSessions, MAX_SESSIONS } from '@/lib/seismograph/sessions';
@@ -61,14 +62,8 @@ export function SettingsContent() {
           </Panel>
 
           <Panel title="Notifikasi gunung api (push)">
-            <div className="space-y-2 px-4 py-3 text-sm">
-              <p className="text-muted">
-                Notifikasi perubahan tingkat aktivitas, informasi letusan resmi, dan VONA memakai sistem push yang sama.
-                Aktifkan dan atur kategorinya di halaman Gunung Berapi.
-              </p>
-              <Link href="/gunung-berapi/notifikasi" className="inline-flex items-center gap-1 font-medium text-accent underline">
-                <Mountain size={15} aria-hidden /> Atur notifikasi gunung api
-              </Link>
+            <div className="px-4 py-3">
+              <VolcanoPushSettings />
             </div>
           </Panel>
         </div>

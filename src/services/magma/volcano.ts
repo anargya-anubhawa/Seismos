@@ -210,9 +210,29 @@ export function getCameras(): Promise<Fetched<VolcanoCamera[]>> {
 export function getKrbMaps(): Promise<Fetched<KrbMap[]>> {
   return withCache('magma:volcano:krb', 6 * 60 * 60_000, async () => {
     const payload = await getJson('/volcano/krb?size=100');
-    return rowsOf(payload)
+    const maps = rowsOf(payload)
       .map(normalizeKrb)
       .filter((map): map is KrbMap => map !== null);
+    if (maps.length === 0) return maps;
+
+    // Cocokkan peta dengan daftar status resmi lewat `volcano_id` supaya
+    // tautan detail memakai kode gunung api yang benar. Nama pada peta KRB
+    // tidak dapat dipakai sebagai slug (mis. "Hobal" berkode "HOB"). Bila
+    // daftar status gagal dimuat, peta tetap ditampilkan tanpa kode.
+    try {
+      const statuses = await getVolcanoStatuses();
+      const codeById = new Map(statuses.value.map((volcano) => [volcano.id, volcano.code]));
+      const codeByName = new Map(
+        statuses.value.map((volcano) => [volcano.name.trim().toLowerCase(), volcano.code]),
+      );
+      for (const map of maps) {
+        const byId = map.volcanoId ? codeById.get(map.volcanoId) : undefined;
+        map.volcanoCode = byId ?? codeByName.get(map.volcanoName.trim().toLowerCase()) ?? null;
+      }
+    } catch {
+      for (const map of maps) map.volcanoCode = null;
+    }
+    return maps;
   });
 }
 
