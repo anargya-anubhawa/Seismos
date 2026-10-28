@@ -55,6 +55,24 @@ export const SOURCE_BMKG = 'BMKG / InaTEWS (data.bmkg.go.id)';
 export const SOURCE_MAGMA = 'MAGMA Indonesia — PVMBG, Badan Geologi, KESDM';
 export const SOURCE_BMKG_WEATHER = 'BMKG — Badan Meteorologi, Klimatologi, dan Geofisika (bmkg.go.id/cuaca)';
 
+/**
+ * Halaman resmi tiap sumber data.
+ *
+ * Dipisahkan dari label supaya tautan "buka sumber" tidak perlu menebak dari
+ * nama sumber. Sebelumnya hanya MAGMA yang dikenali, sehingga halaman cuaca
+ * ikut menautkan ke daftar gempa BMKG.
+ */
+const SOURCE_URLS: Record<string, string> = {
+  [SOURCE_BMKG]: 'https://data.bmkg.go.id/gempabumi/',
+  [SOURCE_MAGMA]: 'https://magma.esdm.go.id',
+  [SOURCE_BMKG_WEATHER]: 'https://www.bmkg.go.id/cuaca',
+};
+
+/** URL halaman resmi untuk sebuah label sumber; jatuh ke beranda BMKG. */
+export function sourceUrl(source: string): string {
+  return SOURCE_URLS[source] ?? 'https://www.bmkg.go.id';
+}
+
 /* ------------------------------------------------------------------- gempa -- */
 
 export interface ShareTextInput {

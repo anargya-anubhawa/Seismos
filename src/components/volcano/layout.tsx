@@ -80,8 +80,11 @@ export function VolcanoPage({
   reportText,
   shareTitle,
   attachments = [],
+  code,
 }: {
   title: string;
+  /** Kode gunung api; bila diisi, tab navigasi konteks gunung tampil. */
+  code?: string;
   hint?: string;
   updatedAt?: string | null;
   errors?: string[];
@@ -94,7 +97,7 @@ export function VolcanoPage({
   return (
     <div className="min-w-0">
       <PageTitle title={title} hint={hint} />
-      <VolcanoTabs />
+      <VolcanoTabs code={code} />
       <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
         <span className="inline-flex items-center gap-1">
           <Info size={12} aria-hidden /> Sumber: MAGMA Indonesia — PVMBG, Badan Geologi, KESDM

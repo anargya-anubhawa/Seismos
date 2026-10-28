@@ -63,16 +63,18 @@ const GROUP_GUNUNG: NavGroup = {
   label: 'Gunung Berapi',
   icon: Mountain,
   items: [
-    { href: '/gunung-berapi', label: 'Ringkasan', short: 'Gunung', icon: Activity, also: ['/volcano-seismogram'] },
+    /*
+      Status Aktivitas, Laporan Aktivitas, Laporan Harian, dan Riwayat Erupsi
+      tidak lagi berdiri di sini: keempatnya kini menjadi bagian dari halaman
+      gunung api masing-masing (`/gunung-berapi/<kode>/status`, dst.) supaya
+      dropdown tidak padat. Halaman globalnya tetap dapat dibuka lewat URL.
+    */
+    { href: '/gunung-berapi', label: 'Daftar Gunung', short: 'Gunung', icon: Mountain, also: ['/volcano-seismogram'] },
     { href: '/gunung-berapi/peta', label: 'Peta Sebaran', short: 'Peta Gunung', icon: Map },
-    { href: '/gunung-berapi/status', label: 'Status Aktivitas', short: 'Status', icon: Mountain },
-    { href: '/gunung-berapi/laporan', label: 'Laporan Aktivitas', short: 'Laporan', icon: FileText },
-    { href: '/gunung-berapi/laporan-harian', label: 'Laporan Harian', short: 'Harian', icon: FileText },
     { href: '/gunung-berapi/krb', label: 'Peta KRB', short: 'KRB', icon: ShieldAlert },
-    { href: '/gunung-berapi/erupsi', label: 'Riwayat Erupsi', short: 'Erupsi', icon: Flame },
     { href: '/gunung-berapi/seismogram', label: 'Live Seismogram', short: 'Seismogram', icon: Radio },
-    { href: '/gunung-berapi/vona', label: 'VONA', short: 'VONA', icon: Send },
     { href: '/gunung-berapi/cctv', label: 'CCTV', short: 'CCTV', icon: Camera },
+    { href: '/gunung-berapi/vona', label: 'VONA', short: 'VONA', icon: Send },
     { href: '/gunung-berapi/gallery', label: 'Galeri', short: 'Galeri', icon: ImageIcon },
     { href: '/gunung-berapi/notifikasi', label: 'Notifikasi', short: 'Notif', icon: Bell },
   ],

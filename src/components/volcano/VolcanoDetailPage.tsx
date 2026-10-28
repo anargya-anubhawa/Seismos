@@ -69,6 +69,7 @@ export function VolcanoDetailPage({ code }: { code: string }) {
     <VolcanoPage
       title={`Gunung ${volcano.name}`}
       hint={`${volcano.province} · Kode MAGMA ${volcano.code}`}
+      code={volcano.code}
       updatedAt={data?.updatedAt}
       errors={errors}
       shareTitle={`Status Gunung ${volcano.name} — Seismos Indonesia`}

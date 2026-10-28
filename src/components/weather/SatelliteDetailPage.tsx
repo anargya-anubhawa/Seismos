@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { ArrowLeft, ExternalLink, Info, RefreshCw } from 'lucide-react';
 import { PageTitle, Panel, Skeleton, StateBox } from '@/components/ui/common';
 import { CopyLinkButton, ShareMenu } from '@/components/share/ShareActions';
-import { DeferredImage } from '@/components/volcano/DeferredImage';
+import { SourceImage } from '@/components/volcano/parts';
 import { SATELLITE_GROUP_LABEL } from '@/lib/weather/parse';
 import { SOURCE_BMKG_WEATHER, creditLines } from '@/lib/share/report-text';
 import { fmtAgo } from '@/lib/formatting';
@@ -90,18 +90,36 @@ export function SatelliteDetailPage({ id }: { id: string }) {
         hint={`${SATELLITE_GROUP_LABEL[product.group]} · citra resmi BMKG (INDERAJA)`}
       />
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]">
-        <Panel className="min-w-0" title="Citra">
-          <div className="p-3">
-            <DeferredImage
-              title={product.name}
-              meta={frame?.capturedAt ? `citra ${fmtAgo(frame.capturedAt)}` : undefined}
-              alt={`Citra satelit ${product.name} BMKG`}
+      {/*
+        Citra ditampilkan lebih dulu dan ukuram besar: inilah alasan pengguna
+        membuka halaman ini setelah menekan "Lihat detail". Deskripsi resmi
+        BMKG menyusul di sampingnya.
+      */}
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,24rem)]">
+        <Panel className="min-w-0 overflow-hidden" title="Citra satelit">
+          <div className="bg-white p-2">
+            <SourceImage
+              eager
               src={`${product.imagePath}?v=${frame?.capturedAt ? encodeURIComponent(frame.capturedAt) : '0'}`}
-              buttonLabel="Tampilkan citra"
-              imageClassName="block w-full rounded-md object-contain"
+              alt={`Citra satelit ${product.name} BMKG`}
+              className="mx-auto block w-full rounded object-contain"
             />
           </div>
+          <p className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-line px-3 py-2 text-[11px] text-muted">
+            <span>
+              {frame?.capturedAt
+                ? `Citra diambil ${new Date(frame.capturedAt).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })} WIB`
+                : 'Waktu citra tidak tercantum pada sumber'}
+            </span>
+            <a
+              href={product.sourceUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="ml-auto inline-flex items-center gap-1 underline"
+            >
+              Citra asli INDERAJA <ExternalLink size={10} aria-hidden />
+            </a>
+          </p>
         </Panel>
 
         <div className="min-w-0 space-y-4">
@@ -109,7 +127,7 @@ export function SatelliteDetailPage({ id }: { id: string }) {
             <div className="space-y-3 p-4">
               <p className="flex items-start gap-1.5 text-[11px] text-muted">
                 <Info size={12} aria-hidden className="mt-0.5 shrink-0" />
-                <span>Keterangan di bawah dikutip dari halaman resmi BMKG, tidak diubah aplikasi.</span>
+                <span className="min-w-0">Keterangan di bawah dikutip dari halaman resmi BMKG, tidak diubah aplikasi.</span>
               </p>
               <p className="text-sm leading-relaxed [overflow-wrap:anywhere]">{product.description}</p>
               <dl className="space-y-1.5 border-t border-line pt-3 text-xs">
@@ -120,6 +138,10 @@ export function SatelliteDetailPage({ id }: { id: string }) {
                 <div className="flex items-baseline justify-between gap-3">
                   <dt className="shrink-0 text-muted">Ukuran citra</dt>
                   <dd className="tabular-nums">{product.width} × {product.height} piksel</dd>
+                </div>
+                <div className="flex items-baseline justify-between gap-3">
+                  <dt className="shrink-0 text-muted">Kelompok</dt>
+                  <dd className="min-w-0 text-right">{SATELLITE_GROUP_LABEL[product.group]}</dd>
                 </div>
                 <div className="flex items-baseline justify-between gap-3">
                   <dt className="shrink-0 text-muted">Pembaruan citra</dt>
@@ -136,7 +158,8 @@ export function SatelliteDetailPage({ id }: { id: string }) {
           <Panel className="min-w-0" title="Bagikan">
             <div className="space-y-3 p-4">
               <div className="flex flex-wrap gap-2">
-                <CopyLinkButton label="Salin tautan" />
+                {/* Tautan yang disalin menunjuk halaman ini, bukan popup. */}
+                <CopyLinkButton label="Salin tautan" path={`/cuaca/satelit/${product.id}`} />
                 <a
                   href={product.detailUrl}
                   target="_blank"

@@ -3,7 +3,8 @@
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import {
-  AlertTriangle, Camera, ChevronLeft, ChevronRight, Clock, Eye, ExternalLink, ImageOff, Maximize2, Mountain, X,
+  AlertTriangle, Camera, ChevronLeft, ChevronRight, Clock, Eye, ExternalLink, ImageOff, Loader2, Maximize2,
+  Mountain, X,
 } from 'lucide-react';
 import { fmtTime } from '@/lib/formatting';
 import { levelLabel } from '@/lib/volcano/magma';
@@ -190,6 +191,7 @@ export function CameraCard({
 }) {
   const host = useRef<HTMLLIElement | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const [failed, setFailed] = useState(false);
   const age = cameraAge(camera.capturedAt);
   const toneClass = age.tone === 'ok' ? 'text-ok' : age.tone === 'warn' ? 'text-[#8A6A00] dark:text-[#F2C14E]' : 'text-danger';
 
@@ -207,28 +209,44 @@ export function CameraCard({
         <span className={`shrink-0 text-[10px] font-semibold uppercase tracking-wide ${toneClass}`}>{age.tone === 'ok' ? 'Baru' : age.tone === 'warn' ? 'Tertunda' : 'Lama'}</span>
       </div>
       {/*
-        Snapshot kamera tidak diunduh otomatis: satu gunung api bisa punya
-        beberapa kamera dan setiap gambar berukuran besar. Pengguna harus
-        menekan tombol dulu, sehingga halaman CCTV tetap ringan.
+        Snapshot dimuat langsung tanpa perlu diklik, tetapi dengan
+        `loading="lazy"` supaya gambar yang masih jauh di bawah layar baru
+        diunduh ketika hampir terlihat. Dengan begitu pengguna langsung melihat
+        citra kamera begitu kartunya masuk layar, tanpa memicu puluhan unduhan
+        sekaligus saat halaman dibuka.
       */}
       <button
         type="button"
         onClick={onOpen}
-        className="flex aspect-video w-full flex-col items-center justify-center gap-1.5 border-y border-line bg-bg/60 text-xs font-medium text-muted hover:bg-line/30 hover:text-ink"
-        aria-label={`Muat dan perbesar kamera ${camera.station} di ${camera.volcanoName}`}
+        className="relative block aspect-video w-full border-y border-line bg-bg/60"
+        aria-label={`Perbesar kamera ${camera.station} di ${camera.volcanoName}`}
       >
-        {loaded ? (
-          <>
-            <Eye size={20} aria-hidden />
-            <span>Buka gambar</span>
-          </>
-        ) : (
-          <>
-            <Camera size={20} aria-hidden />
-            <span>Gambar belum dimuat</span>
-            <span className="text-[11px] font-normal">Tekan untuk memuat snapshot</span>
-          </>
+        {!loaded && !failed && (
+          <span className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 text-xs text-muted">
+            <Loader2 size={18} aria-hidden className="animate-spin" />
+            <span>Memuat citra kamera…</span>
+          </span>
         )}
+        {failed ? (
+          <span className="absolute inset-0 flex flex-col items-center justify-center gap-1 text-xs text-muted">
+            <ImageOff size={18} aria-hidden />
+            <span>Citra kamera sedang tidak tersedia.</span>
+          </span>
+        ) : (
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img
+            src={camera.imagePath}
+            alt={`Citra kamera ${camera.station || camera.id} Gunung ${camera.volcanoName}`}
+            loading="lazy"
+            decoding="async"
+            className={`h-full w-full object-cover transition-opacity ${loaded ? 'opacity-100' : 'opacity-0'}`}
+            onLoad={() => setLoaded(true)}
+            onError={() => setFailed(true)}
+          />
+        )}
+        <span className="absolute bottom-1.5 right-1.5 inline-flex items-center gap-1 rounded bg-black/55 px-1.5 py-0.5 text-[10px] font-medium text-white">
+          <Maximize2 size={10} aria-hidden /> Perbesar
+        </span>
       </button>
       <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-xs">
         <span className={`inline-flex items-center gap-1 ${toneClass}`}>

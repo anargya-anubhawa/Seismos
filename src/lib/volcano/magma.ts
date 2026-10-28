@@ -242,9 +242,13 @@ export function normalizeReport(
       ? `/api/volcano/image?url=${encodeURIComponent(imageUrl)}`
       : null,
     kind,
-    sourceUrl: slug
-      ? `${MAGMA_SITE}/v1/gunung-api/laporan/${encodeURIComponent(slug)}`
-      : `${baseUrl}/v1/gunung-api/laporan`,
+    /*
+      Tautan sumber menunjuk halaman web MAGMA yang benar-benar bisa dibuka.
+      `…/laporan/<slug>` adalah endpoint JSON, bukan halaman: pengunjung hanya
+      mendapat 403 Forbidden. Halaman daftar laporan resmi ada di
+      `…/laporan` (untuk laporan harian: `…/laporan-harian`).
+    */
+    sourceUrl: kind === 'harian' ? MAGMA_SOURCES.daily : MAGMA_SOURCES.reports,
   };
 }
 

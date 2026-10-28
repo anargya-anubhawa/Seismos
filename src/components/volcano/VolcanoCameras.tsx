@@ -17,8 +17,9 @@ const ageHours = (capturedAt: string | null): number | null => {
 };
 
 /**
- * CCTV MAGMA berupa gambar snapshot (bukan video live). Gambar dimuat hanya saat
- * kartu terlihat, jadi membuka halaman ini tidak memicu puluhan unduhan.
+ * CCTV MAGMA berupa gambar snapshot (bukan video live). Gambar dimuat otomatis
+ * dengan `loading="lazy"`: kartu yang sudah terlihat langsung menampilkan citra,
+ * sedangkan kartu jauh di bawah layar baru diunduh saat mendekat.
  */
 export function VolcanoCameras() {
   const query = useVolcanoQuery<VolcanoCameraPayload>('/api/volcano/cameras', { pollMs: 300_000 });
@@ -87,8 +88,8 @@ export function VolcanoCameras() {
           <Camera size={14} aria-hidden className="mt-0.5 shrink-0 text-muted" />
           <span>
             <strong>{cameras.length} kamera</strong> dari {grouped.length} gunung api; {freshCount} gambar diperbarui
-            dalam 6 jam terakhir. Gambar dimuat saat terlihat di layar. Bila gambar tertunda lama, kamera di pos
-            pengamatan kemungkinan sedang tidak aktif — gunakan tautan sumber MAGMA untuk memeriksa langsung.
+            dalam 6 jam terakhir. Citra dimuat otomatis saat kartu masuk layar. Bila gambar tertunda lama, kamera di
+            pos pengamatan kemungkinan sedang tidak aktif — gunakan tautan sumber MAGMA untuk memeriksa langsung.
           </span>
         </p>
       </div>

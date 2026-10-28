@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   creditLines, decodeEntities, reportText, earthquakeReportText, earthquakeSummaryText, formatCoordinate, krbText, listSummaryText,
-  SEISMOS_NAME, SOURCE_BMKG, SOURCE_MAGMA, siteOrigin, tsunamiReportText, volcanoStatusText,
+  SEISMOS_NAME, SOURCE_BMKG, SOURCE_BMKG_WEATHER, SOURCE_MAGMA, siteOrigin, sourceUrl, tsunamiReportText,
+  volcanoStatusText,
 } from '../src/lib/share/report-text';
 import type { Earthquake } from '../src/types/earthquake';
 
@@ -38,6 +39,16 @@ test('creditLines selalu berisi aplikasi, tautan, dan sumber data', () => {
   assert.match(lines[0], new RegExp(SEISMOS_NAME));
   assert.match(lines[0], /https:\/\/seismos\.anargya\.my\.id/);
   assert.match(lines[1], /^Sumber data: BMKG/);
+});
+
+test('sourceUrl mengarah ke halaman resmi tiap sumber, bukan selalu gempa', () => {
+  // Regresi: dulu tautan "buka sumber" jatuh ke daftar gempa BMKG untuk semua
+  // sumber selain MAGMA, sehingga halaman cuaca menautkan ke menu yang salah.
+  assert.equal(sourceUrl(SOURCE_BMKG), 'https://data.bmkg.go.id/gempabumi/');
+  assert.equal(sourceUrl(SOURCE_MAGMA), 'https://magma.esdm.go.id');
+  assert.equal(sourceUrl(SOURCE_BMKG_WEATHER), 'https://www.bmkg.go.id/cuaca');
+  // Label tak dikenal tetap menghasilkan tautan yang masuk akal.
+  assert.equal(sourceUrl('sumber lain'), 'https://www.bmkg.go.id');
 });
 
 test('earthquakeReportText mengikuti susunan BMKG dan diakhiri kredit', () => {

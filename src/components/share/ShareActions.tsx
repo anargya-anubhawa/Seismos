@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Check, ChevronDown, Copy, Download, ExternalLink, Link2, Share2, TriangleAlert } from 'lucide-react';
-import { SOURCE_MAGMA } from '@/lib/share/report-text';
+import { sourceUrl } from '@/lib/share/report-text';
 
 /**
  * Salin teks ke papan klip dengan beberapa lapis cadangan.
@@ -385,7 +385,7 @@ export function ShareActions({
         Sumber data: {source}
         {' '}
         <a
-          href={source === SOURCE_MAGMA ? 'https://magma.esdm.go.id' : 'https://data.bmkg.go.id/gempabumi/'}
+          href={sourceUrl(source)}
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center gap-0.5 underline"

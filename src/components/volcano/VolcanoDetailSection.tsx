@@ -2,9 +2,10 @@
 
 import Link from 'next/link';
 import { useMemo } from 'react';
-import { ArrowLeft, Camera, ChevronRight, FileText, Radio } from 'lucide-react';
+import { Activity, ArrowLeft, Camera, ChevronRight, FileText, Radio, Waves } from 'lucide-react';
 import { LoadingNotice, Panel, Skeleton } from '@/components/ui/common';
 import { useVolcanoQuery } from '@/hooks/useVolcano';
+import { fmtTime } from '@/lib/formatting';
 import type { VolcanoDetail } from '@/types/volcano';
 import type { VolcanoReportPayload } from '@/types/volcano-ui';
 import { CameraGallery, ReportCard, SourceImage, VolcanoLevelBadge } from './parts';
@@ -22,11 +23,16 @@ export function VolcanoDetailSection({
   section,
 }: {
   code: string;
-  section: 'laporan' | 'cctv' | 'seismogram' | 'krb';
+  section: 'laporan' | 'cctv' | 'seismogram' | 'krb' | 'status' | 'laporan-harian' | 'erupsi';
 }) {
   const query = useVolcanoQuery<DetailPayload>(`/api/volcano/volcano/${encodeURIComponent(code)}`, { pollMs: 180_000 });
   const reports = useVolcanoQuery<VolcanoReportPayload>(
     `/api/volcano/laporan?size=40&volcano=${encodeURIComponent(code.toUpperCase())}`,
+    { pollMs: 300_000 },
+  );
+  // Laporan harian memakai jenis berbeda pada endpoint yang sama.
+  const daily = useVolcanoQuery<VolcanoReportPayload>(
+    `/api/volcano/laporan?kind=harian&size=40&volcano=${encodeURIComponent(code.toUpperCase())}`,
     { pollMs: 300_000 },
   );
 
@@ -36,6 +42,10 @@ export function VolcanoDetailSection({
   const volcanoReports = useMemo(
     () => (reports.data?.reports ?? []).filter((report) => report.volcanoCode.toUpperCase() === code.toUpperCase()),
     [reports.data?.reports, code],
+  );
+  const hudReports = useMemo(
+    () => (daily.data?.reports ?? []).filter((report) => report.volcanoCode.toUpperCase() === code.toUpperCase()),
+    [daily.data?.reports, code],
   );
 
   if (query.loading && !query.data) {
@@ -61,6 +71,9 @@ export function VolcanoDetailSection({
 
   const titles: Record<typeof section, string> = {
     laporan: 'Laporan Aktivitas',
+    'laporan-harian': 'Laporan Harian',
+    status: 'Status Aktivitas',
+    erupsi: 'Riwayat Erupsi',
     cctv: 'CCTV',
     seismogram: 'Live Seismogram',
     krb: 'Peta KRB',
@@ -70,6 +83,7 @@ export function VolcanoDetailSection({
     <VolcanoPage
       title={`${titles[section]} — Gunung ${volcano.name}`}
       hint={`${volcano.province} · status ${volcano.levelLabel}`}
+      code={volcano.code}
       updatedAt={query.data?.updatedAt}
       errors={query.data?.errors ?? []}
     >
@@ -80,7 +94,10 @@ export function VolcanoDetailSection({
         <Link href={base} className="inline-flex min-h-8 items-center gap-1 rounded-md border border-line px-2 font-medium">
           <ArrowLeft size={11} aria-hidden /> Detail gunung api
         </Link>
+        <Link href={`${base}/status`} className="inline-flex min-h-8 items-center gap-1 rounded-md border border-line px-2 font-medium"><Activity size={11} aria-hidden /> Status</Link>
         <Link href={`${base}/laporan`} className="inline-flex min-h-8 items-center gap-1 rounded-md border border-line px-2 font-medium"><FileText size={11} aria-hidden /> Laporan</Link>
+        <Link href={`${base}/laporan-harian`} className="inline-flex min-h-8 items-center gap-1 rounded-md border border-line px-2 font-medium"><FileText size={11} aria-hidden /> Harian</Link>
+        <Link href={`${base}/erupsi`} className="inline-flex min-h-8 items-center gap-1 rounded-md border border-line px-2 font-medium"><Waves size={11} aria-hidden /> Erupsi</Link>
         <Link href={`${base}/cctv`} className="inline-flex min-h-8 items-center gap-1 rounded-md border border-line px-2 font-medium"><Camera size={11} aria-hidden /> CCTV</Link>
         <Link href={`${base}/seismogram`} className="inline-flex min-h-8 items-center gap-1 rounded-md border border-line px-2 font-medium"><Radio size={11} aria-hidden /> Seismogram</Link>
         <Link href={`${base}/krb`} className="inline-flex min-h-8 items-center gap-1 rounded-md border border-line px-2 font-medium">KRB</Link>
@@ -100,6 +117,92 @@ export function VolcanoDetailSection({
             </div>
           )}
         </>
+      )}
+
+      {section === 'status' && (
+        <>
+          <Panel title="Status aktivitas resmi PVMBG">
+            <div className="space-y-3 px-4 py-3 text-sm">
+              <div className="flex flex-wrap items-center gap-2">
+                <VolcanoLevelBadge level={volcano.level} />
+                <span className="text-xs text-muted">
+                  {volcano.levelLabel}
+                  {query.data?.levelChangedAt ? ` · penetapan terakhir ${query.data.levelChangedAt}` : ''}
+                </span>
+              </div>
+              <dl className="grid gap-1.5 text-xs sm:grid-cols-2">
+                <div><dt className="inline font-semibold">Koordinat: </dt><dd className="inline text-muted">{volcano.latitude.toFixed(4)}, {volcano.longitude.toFixed(4)}</dd></div>
+                <div><dt className="inline font-semibold">Elevasi: </dt><dd className="inline text-muted">{volcano.elevation !== null ? `${Math.round(volcano.elevation)} m` : 'tidak tercantum'}</dd></div>
+                <div><dt className="inline font-semibold">Wilayah: </dt><dd className="inline text-muted">{volcano.province}{volcano.city ? ` · ${volcano.city}` : ''}</dd></div>
+                <div><dt className="inline font-semibold">Data diterima: </dt><dd className="inline text-muted">{query.data?.updatedAt ? fmtTime(query.data.updatedAt) : 'tidak tercantum'}</dd></div>
+              </dl>
+            </div>
+          </Panel>
+
+          <h2 className="mb-2 mt-4 text-sm font-semibold">Riwayat perubahan tingkat aktivitas</h2>
+          {(query.data?.levelHistory ?? []).length === 0 ? (
+            <VolcanoEmpty title="Riwayat tingkat tidak tersedia">
+              MAGMA tidak mengembalikan riwayat perubahan tingkat untuk gunung ini. Seismos tidak mengarang
+              riwayat sebelum periode data yang tersedia.
+            </VolcanoEmpty>
+          ) : (
+            <Panel>
+              <ol className="divide-y divide-line">
+                {(query.data?.levelHistory ?? []).map((change) => (
+                  <li key={`${change.id}-${change.changeDate}`} className="flex flex-wrap items-center gap-2 px-4 py-2 text-xs">
+                    <span className="font-medium">{change.previousLabel ?? '—'} → {change.currentLabel ?? '—'}</span>
+                    <span className="text-muted">{change.changeDate}</span>
+                    {change.sourceName && <span className="rounded border border-line px-1 text-[10px] text-muted">{change.sourceName}</span>}
+                    {change.durationDays !== null && <span className="ml-auto text-muted">{change.durationDays} hari</span>}
+                  </li>
+                ))}
+              </ol>
+            </Panel>
+          )}
+        </>
+      )}
+
+      {section === 'laporan-harian' && (
+        <>
+          {reports.loading && !reports.data ? (
+            <LoadingNotice>Mengambil laporan harian…</LoadingNotice>
+          ) : hudReports.length === 0 ? (
+            <VolcanoEmpty title="Belum ada laporan harian untuk gunung ini pada daftar MAGMA">
+              Laporan harian diterbitkan setiap hari untuk gunung api yang sedang diamati.{' '}
+              <Link href="/gunung-berapi/laporan-harian" className="text-accent underline">Lihat seluruh laporan harian</Link>.
+            </VolcanoEmpty>
+          ) : (
+            <div className="grid gap-3 lg:grid-cols-2">
+              {hudReports.map((report) => <ReportCard key={report.id} report={report} showVolcano={false} />)}
+            </div>
+          )}
+        </>
+      )}
+
+      {section === 'erupsi' && (
+        (query.data?.eruptions ?? []).length === 0 ? (
+          <VolcanoEmpty title="Tidak ada informasi letusan (VEN) untuk gunung ini">
+            Naiknya tingkat aktivitas tidak otomatis berarti erupsi; informasi letusan hanya terbit bila PVMBG
+            menyatakan letusan terjadi.{' '}
+            <Link href="/gunung-berapi/erupsi" className="text-accent underline">Lihat seluruh riwayat erupsi</Link>.
+          </VolcanoEmpty>
+        ) : (
+          <ul className="space-y-2">
+            {(query.data?.eruptions ?? []).map((event) => (
+              <li key={event.id} className="rounded-lg border border-line bg-surface px-4 py-2.5 text-sm">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-medium">{fmtTime(event.occurredAt)}</span>
+                  <span className="text-xs text-muted">
+                    {event.ashHeightM !== null && event.ashHeightM > 0 ? `kolom abu ${event.ashHeightM} m` : 'kolom abu tidak teramati'}
+                    {event.durationSeconds !== null ? ` · ${event.durationSeconds} detik` : ''}
+                  </span>
+                  <Link href={`/gunung-berapi/erupsi/${event.id}`} className="ml-auto text-xs font-medium text-accent underline">Detail</Link>
+                </div>
+                {event.information && <p className="mt-1 line-clamp-3 text-xs text-muted">{event.information}</p>}
+              </li>
+            ))}
+          </ul>
+        )
       )}
 
       {section === 'cctv' && (
