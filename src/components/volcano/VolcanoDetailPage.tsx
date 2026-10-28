@@ -14,6 +14,7 @@ import {
   CameraGallery, GalleryGrid, ReportCard, SourceImage, VonaCard, VolcanoLevelBadge,
 } from './parts';
 import { Disclaimer, OfflineNotice, VolcanoEmpty, VolcanoErrorBox, VolcanoPage } from './layout';
+import { LiveStreamInlineLinks } from './VolcanoLiveList';
 
 type Payload = VolcanoDetail & { error?: string };
 
@@ -245,6 +246,10 @@ export function VolcanoDetailPage({ code }: { code: string }) {
           <ul className="space-y-2">{data.vona.slice(0, 4).map((notice) => <VonaCard key={notice.id} notice={notice} />)}</ul>
         </section>
       )}
+
+      <div className="mt-6">
+        <LiveStreamInlineLinks volcano={volcano.name} />
+      </div>
 
       <section className="mt-6">
         <h2 className="mb-2 flex items-center gap-1.5 text-sm font-semibold"><Camera size={15} aria-hidden /> CCTV</h2>

@@ -5,7 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import {
   Activity, BarChart3, Bell, Camera, ChevronDown, CloudSun, FileText, Flame, History, Image as ImageIcon,
-  Info, LayoutDashboard, Map, Menu, Moon, Mountain, Radio, RefreshCw, Satellite, Search, Send, Settings,
+  Info, LayoutDashboard, Map, Menu, Moon, Mountain, Play, Radio, RefreshCw, Satellite, Search, Send, Settings,
   ShieldAlert, Sun, TriangleAlert, Waves, X,
 } from 'lucide-react';
 import { useEarthquakes } from '@/hooks/useEarthquakes';
@@ -74,6 +74,7 @@ const GROUP_GUNUNG: NavGroup = {
     { href: '/gunung-berapi/krb', label: 'Peta KRB', short: 'KRB', icon: ShieldAlert },
     { href: '/gunung-berapi/seismogram', label: 'Live Seismogram', short: 'Seismogram', icon: Radio },
     { href: '/gunung-berapi/cctv', label: 'CCTV', short: 'CCTV', icon: Camera },
+    { href: '/gunung-berapi/live-youtube', label: 'Live YouTube', short: 'YouTube', icon: Play },
     { href: '/gunung-berapi/vona', label: 'VONA', short: 'VONA', icon: Send },
     { href: '/gunung-berapi/gallery', label: 'Galeri', short: 'Galeri', icon: ImageIcon },
     { href: '/gunung-berapi/notifikasi', label: 'Notifikasi', short: 'Notif', icon: Bell },

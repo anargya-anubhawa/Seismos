@@ -319,47 +319,58 @@ export function CameraGallery({ cameras, label }: { cameras: VolcanoCamera[]; la
 }
 
 /**
- * Satu ubin galeri. Thumbnail tidak diunduh otomatis karena galeri dapat
- * memuat puluhan foto sekaligus; pengguna menekan "Muat foto" dulu. Setelah
- * gambar tampil, menekannya membuka tampilan penuh.
+ * Satu ubin galeri. Foto diunduh otomatis dengan `loading="lazy"`, jadi galeri
+ * panjang hanya mengambil gambar yang mendekati layar. Menekan ubin membuka
+ * tampilan penuh.
  */
 function PhotoTile({ photo, onOpen }: { photo: GalleryPhoto; onOpen: () => void }) {
-  const [shown, setShown] = useState(false);
   const label = photo.visualDate ? `Visual ${photo.visualDate}` : 'Tanggal visual tidak tercantum';
 
   return (
     <div className="overflow-hidden rounded-lg border border-line bg-surface">
-      {shown ? (
-        <button
-          type="button"
-          onClick={onOpen}
-          className="block w-full bg-white"
-          aria-label={`Buka foto dokumentasi visual ${photo.volcanoName}${photo.visualDate ? ` tanggal ${photo.visualDate}` : ''}`}
-        >
-          <SourceImage
-            eager
-            src={photo.imagePath}
-            alt={`Dokumentasi visual Gunung ${photo.volcanoName}`}
-            className="block aspect-[5/3] w-full object-contain"
-            onLoadState={() => undefined}
-          />
-        </button>
-      ) : (
-        <button
-          type="button"
-          onClick={() => setShown(true)}
-          className="flex aspect-[5/3] w-full flex-col items-center justify-center gap-1 bg-bg/60 text-[11px] font-medium text-muted hover:bg-line/30 hover:text-ink"
-          aria-label={`Muat foto dokumentasi visual ${photo.volcanoName}`}
-        >
-          <Camera size={18} aria-hidden />
-          <span>Muat foto</span>
-        </button>
-      )}
+      {/*
+        Foto dimuat langsung tanpa perlu diklik. `loading="lazy"` membatasi
+        unduhan pada galeri panjang: hanya foto yang mendekati layar yang
+        diambil, sehingga halaman tetap ringan tanpa menyembunyikan gambar
+        di balik tombol "Muat foto".
+      */}
+      <button
+        type="button"
+        onClick={onOpen}
+        className="block aspect-[5/3] w-full bg-white"
+        aria-label={`Buka foto dokumentasi visual ${photo.volcanoName}${photo.visualDate ? ` tanggal ${photo.visualDate}` : ''}`}
+      >
+        <LazyPhoto src={photo.imagePath} alt={`Dokumentasi visual Gunung ${photo.volcanoName}`} />
+      </button>
       <div className="px-2 py-1.5">
         <span className="block truncate text-xs font-semibold">{photo.volcanoName}</span>
         <span className="block text-[11px] text-muted">{label}</span>
       </div>
     </div>
+  );
+}
+
+/** Foto galeri: `<img>` biasa agar tidak perlu JavaScript hanya untuk menampilkan. */
+function LazyPhoto({ src, alt }: { src: string; alt: string }) {
+  const [failed, setFailed] = useState(false);
+  if (failed) {
+    return (
+      <span className="flex h-full w-full flex-col items-center justify-center gap-1 bg-bg/60 text-[11px] text-muted">
+        <ImageOff size={16} aria-hidden />
+        Foto tidak tersedia
+      </span>
+    );
+  }
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={src}
+      alt={alt}
+      loading="lazy"
+      decoding="async"
+      className="block h-full w-full object-contain"
+      onError={() => setFailed(true)}
+    />
   );
 }
 
