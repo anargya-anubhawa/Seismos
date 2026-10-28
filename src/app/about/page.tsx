@@ -38,6 +38,36 @@ const SOURCES = [
     linkLabel: 'bmkg.go.id/gempabumi/gempabumi-realtime',
   },
   {
+    title: 'BMKG — Prakiraan Cuaca desa/kelurahan',
+    status: 'integrated' as const,
+    description:
+      'Aplikasi memanggil API publik prakiraan cuaca BMKG (api.bmkg.go.id/publik/prakiraan-cuaca) — sumber yang sama dengan halaman bmkg.go.id/cuaca/prakiraan-cuaca — untuk suhu, kelembapan, angin, dan curah hujan per interval tiga jam selama tiga hari.',
+    detail:
+      'Prakiraan BMKG diterbitkan per desa/kelurahan, sehingga aplikasi memetakan lokasi Anda ke kecamatan terdekat memakai daftar kode wilayah terbuka (atribusi Kemendagri/BPS). Angka ditampilkan apa adanya; nilai yang tidak diterbitkan BMKG ditampilkan sebagai “—”.',
+    href: 'https://www.bmkg.go.id/cuaca/prakiraan-cuaca',
+    linkLabel: 'bmkg.go.id/cuaca/prakiraan-cuaca',
+  },
+  {
+    title: 'BMKG — Peringatan Dini Cuaca Ekstrem',
+    status: 'integrated' as const,
+    description:
+      'Aplikasi membaca feed RSS nowcast peringatan dini cuaca BMKG (bmkg.go.id/alerts/nowcast/id) dan menampilkan judul, wilayah, potensi dampak, serta imbauan yang diterbitkan BMKG.',
+    detail:
+      'Aplikasi tidak menilai sendiri tingkat bahaya cuaca. Peringatan ditampilkan apa adanya beserta waktu terbit, perkiraan waktu berakhir jika tercantum, dan tautan dokumen peringatan resminya.',
+    href: 'https://www.bmkg.go.id/cuaca/peringatan-dini-cuaca',
+    linkLabel: 'bmkg.go.id/cuaca/peringatan-dini-cuaca',
+  },
+  {
+    title: 'BMKG — Citra Satelit (INDERAJA)',
+    status: 'integrated' as const,
+    description:
+      'Aplikasi menampilkan produk citra satelit yang sama dengan halaman bmkg.go.id/cuaca/satelit: Himawari-9, GEO-KOMPSAT-2A, GSMaP, titik panas, asap, abu vulkanik, dan petir.',
+    detail:
+      'Citra diambil dari inderaja.bmkg.go.id lalu diteruskan melalui server aplikasi dengan cache singkat dan hanya untuk berkas yang terdaftar. Waktu citra diambil dari keterangan berkas sumber, bukan waktu halaman dibuka.',
+    href: 'https://www.bmkg.go.id/cuaca/satelit',
+    linkLabel: 'bmkg.go.id/cuaca/satelit',
+  },
+  {
     title: 'MAGMA Indonesia — Live Seismograf',
     status: 'integrated' as const,
     description:
@@ -64,7 +94,7 @@ const PRIVACY = [
   {
     title: 'Lokasi GPS',
     description:
-      'Aplikasi hanya meminta lokasi saat Anda menekan “Lokasi saya” di peta atau “Gunakan lokasi saya” di Pengaturan. Koordinat dipakai di browser untuk menampilkan titik Anda, menghitung jarak ke episenter, dan menebak provinsi terdekat. Koordinat tidak dikirim ke server aplikasi dan tidak disimpan sebagai riwayat. Penyedia geolokasi browser atau sistem operasi dapat memproses data sesuai kebijakan mereka.',
+      'Aplikasi hanya meminta lokasi setelah Anda menekan tombol lokasi; permintaan izin tidak muncul otomatis. Untuk gempa, koordinat dipakai di browser menghitung jarak ke episenter dan menebak provinsi terdekat. Untuk cuaca, koordinat dikirim ke server aplikasi sekali agar dapat dipetakan ke desa/kelurahan terdekat dan diambil prakiraan BMKG-nya; koordinat tersebut tidak disimpan permanen — yang disimpan di perangkat Anda hanya nama wilayah terpilih (localStorage) supaya cuaca tetap tampil pada kunjungan berikutnya. Penyedia geolokasi browser atau sistem operasi dapat memproses data sesuai kebijakan mereka.',
   },
   {
     title: 'Peta dan sumber eksternal',

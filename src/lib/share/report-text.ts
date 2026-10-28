@@ -5,6 +5,7 @@ import type { Earthquake } from '../../types/earthquake';
 import type {
   EruptionEvent, KrbMap, VolcanoLevel, VolcanoReport, VonaNotice,
 } from '../../types/volcano';
+import type { WeatherAlert, WeatherForecast, WeatherPoint } from '../../types/weather';
 
 /**
  * Teks laporan siap-salin/siap-bagikan untuk gempa, tsunami, dan gunung api.
@@ -52,6 +53,7 @@ export function creditLines(origin: string, source: string): string {
 
 export const SOURCE_BMKG = 'BMKG / InaTEWS (data.bmkg.go.id)';
 export const SOURCE_MAGMA = 'MAGMA Indonesia — PVMBG, Badan Geologi, KESDM';
+export const SOURCE_BMKG_WEATHER = 'BMKG — Badan Meteorologi, Klimatologi, dan Geofisika (bmkg.go.id/cuaca)';
 
 /* ------------------------------------------------------------------- gempa -- */
 
@@ -265,4 +267,90 @@ export function tsunamiReportText(alert: TsunamiShareInput, options: ShareTextIn
   }
   lines.push('', creditLines(siteOrigin(options.pageUrl), SOURCE_BMKG));
   return lines.join('\n');
+}
+
+/* ------------------------------------------------------------------ cuaca -- */
+
+/** Label jam lokal WIB/WITA/WIT berdasarkan zona wilayah. */
+const zoneLabel = (timezone: string): string =>
+  ({ 'Asia/Jakarta': 'WIB', 'Asia/Pontianak': 'WIB', 'Asia/Makassar': 'WITA', 'Asia/Jayapura': 'WIT' })[timezone] ?? 'WIB';
+
+/**
+ * Teks prakiraan cuaca mengikuti susunan halaman BMKG: wilayah, lalu satu baris
+ * per waktu berisi suhu, cuaca, kelembapan, angin, dan hujan. Angka yang tidak
+ * diterbitkan BMKG tidak dicantumkan agar laporan tidak mengarang nilai.
+ */
+export function weatherForecastText(
+  forecast: WeatherForecast,
+  options: ShareTextInput & { maxPoints?: number } = {},
+): string {
+  const max = options.maxPoints ?? 8;
+  const zone = zoneLabel(forecast.timezone);
+  const lines = [
+    `PRAKIRAAN CUACA — ${forecast.area.district.toUpperCase()}`,
+    `Wilayah: ${forecast.area.village}, ${forecast.area.district}, ${forecast.area.regency}, ${forecast.area.province}`,
+    `Kode wilayah BMKG: ${forecast.area.code}`,
+  ];
+  for (const point of forecast.points.slice(0, max)) {
+    lines.push('', pointLine(point, zone));
+  }
+  lines.push('', creditLines(siteOrigin(options.pageUrl), SOURCE_BMKG_WEATHER));
+  return lines.join('\n');
+}
+
+const pointLine = (point: WeatherPoint, zone: string): string => {
+  const time = new Date(point.time);
+  const clock = Number.isNaN(time.getTime())
+    ? point.time
+    : new Intl.DateTimeFormat('id-ID', {
+        weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
+        timeZone: point.time.split(/[+-]\d{2}:\d{2}$/)[1] ? undefined : 'Asia/Jakarta',
+      }).format(time);
+  const parts = [`${clock} ${zone}`, point.description];
+  if (point.temperatureC !== null) parts.push(`${Math.round(point.temperatureC)}°C`);
+  if (point.humidityPct !== null) parts.push(`lembap ${Math.round(point.humidityPct)}%`);
+  if (point.windSpeedKmh !== null) {
+    parts.push(`angin ${point.windFrom ? `${point.windFrom} ` : ''}${Math.round(point.windSpeedKmh)} km/jam`);
+  }
+  if (point.precipitationMm !== null && point.precipitationMm > 0) parts.push(`hujan ${point.precipitationMm} mm`);
+  return `- ${parts.join(' · ')}`;
+};
+
+/** Teks ringkas satu titik cuaca untuk baris daftar/kartu. */
+export function weatherPointText(point: WeatherPoint, zone: string): string {
+  const parts = [point.description];
+  if (point.temperatureC !== null) parts.push(`${Math.round(point.temperatureC)}°C`);
+  if (point.humidityPct !== null) parts.push(`${Math.round(point.humidityPct)}%`);
+  if (point.precipitationMm !== null && point.precipitationMm > 0) parts.push(`${point.precipitationMm} mm`);
+  void zone;
+  return parts.join(' · ');
+}
+
+/**
+ * Teks peringatan dini cuaca ekstrem. Deskripsi resmi dimuat apa adanya karena
+ * berisi wilayah rinci, dampak, dan imbauan yang tidak boleh diringkas sembarang.
+ */
+export function weatherAlertText(alert: WeatherAlert, options: ShareTextInput = {}): string {
+  const lines = [
+    'PERINGATAN DINI CUACA EKSTREM',
+    `Judul: ${clean(alert.title)}`,
+    `Diterbitkan: ${fmtTime(alert.issuedAt)}`,
+  ];
+  if (alert.expiresAt) lines.push(`Diperkirakan berakhir: ${fmtTime(alert.expiresAt)}`);
+  if (alert.region) lines.push(`Wilayah: ${clean(alert.region)}`);
+  if (clean(alert.description)) lines.push('', clean(alert.description));
+  if (alert.impacts.length > 0) {
+    lines.push('', 'Potensi dampak:');
+    for (const impact of alert.impacts) lines.push(`- ${clean(impact)}`);
+  }
+  if (alert.advice) lines.push('', `Imbauan: ${clean(alert.advice)}`);
+  lines.push('', creditLines(siteOrigin(options.pageUrl), SOURCE_BMKG_WEATHER));
+  return lines.join('\n');
+}
+
+/** Ringkasan satu baris peringatan untuk daftar/kartu dashboard. */
+export function weatherAlertSummary(alert: WeatherAlert): string {
+  const parts = [clean(alert.title)];
+  if (alert.expiresAt) parts.push(`hingga ${fmtTime(alert.expiresAt)}`);
+  return parts.join(' · ');
 }

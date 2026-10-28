@@ -12,6 +12,7 @@ import {
 import { NotificationSummary } from '@/components/notifications/NotificationSettings';
 import { QuakeMapLazy } from '@/components/map/QuakeMapLazy';
 import { MmiSummary } from '@/components/mmi/MmiSummary';
+import { HotEventsPanel, WeatherDashboardCard } from '@/components/weather/WeatherDashboard';
 
 export default function DashboardPage() {
   const { data, loading, error } = useEarthquakes();
@@ -23,6 +24,7 @@ export default function DashboardPage() {
       <>
         <PageTitle title="Dashboard" />
         <LoadingNotice>Mengambil data gempa…</LoadingNotice>
+        <div className="mb-4"><Skeleton className="h-48" /></div>
         <div className="grid w-full min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-24" />)}
         </div>
@@ -34,10 +36,14 @@ export default function DashboardPage() {
     return (
       <>
         <PageTitle title="Dashboard" />
-        <StateBox kind="error" title="Data gempa tidak dapat dimuat">
-          {error ?? 'Sumber BMKG tidak merespons.'} Tidak ada data pengganti yang ditampilkan.
-          Coba muat ulang dengan tombol di kanan atas.
-        </StateBox>
+        <div className="mb-4"><WeatherDashboardCard /></div>
+        <HotEventsPanel />
+        <div className="mt-4">
+          <StateBox kind="error" title="Data gempa tidak dapat dimuat">
+            {error ?? 'Sumber BMKG tidak merespons.'} Tidak ada data pengganti yang ditampilkan.
+            Coba muat ulang dengan tombol di kanan atas.
+          </StateBox>
+        </div>
       </>
     );
   }
@@ -46,9 +52,14 @@ export default function DashboardPage() {
     <>
       <PageTitle
         title="Dashboard"
-        hint="Gempa terbaru, ringkasan 24 jam, dan status pembaruan sumber. Angka dihitung dari jendela data BMKG yang tersedia, bukan katalog lengkap."
+        hint="Ringkasan satu layar: cuaca di lokasi Anda, kejadian yang perlu perhatian (letusan gunung api, tsunami, peringatan cuaca ekstrem), lalu gempa terbaru. Semua angka berasal dari sumber resmi BMKG/PVMBG."
       />
       <StaleDataNotice error={error} updatedAt={data.updatedAt} />
+
+      <div className="mb-4 grid w-full min-w-0 grid-cols-1 gap-4 lg:grid-cols-2">
+        <WeatherDashboardCard />
+        <HotEventsPanel />
+      </div>
 
       <div className="grid w-full min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Panel className="min-w-0 p-4">

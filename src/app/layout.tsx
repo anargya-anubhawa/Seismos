@@ -4,6 +4,7 @@ import './globals.css';
 import { EarthquakeProvider } from '@/hooks/useEarthquakes';
 import { NotificationProvider } from '@/hooks/useNotifications';
 import { Shell } from '@/components/navigation/Shell';
+import { WeatherStrip } from '@/components/weather/WeatherStrip';
 import { ServiceWorkerRegister } from '@/components/pwa/ServiceWorkerRegister';
 
 const sans = Public_Sans({ subsets: ['latin'], variable: '--font-sans' });
@@ -49,7 +50,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="font-sans antialiased">
         <EarthquakeProvider>
           <NotificationProvider>
-            <Shell>{children}</Shell>
+            <Shell weatherStrip={<WeatherStrip />}>{children}</Shell>
             <ServiceWorkerRegister />
           </NotificationProvider>
         </EarthquakeProvider>

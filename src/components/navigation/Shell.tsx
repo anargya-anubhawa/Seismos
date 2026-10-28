@@ -4,8 +4,8 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import {
-  Activity, BarChart3, History, Info, LayoutDashboard, Map, Menu, Moon, Mountain, RefreshCw,
-  Search, Settings, Sun, Waves, X,
+  Activity, BarChart3, ChevronDown, CloudSun, History, Info, LayoutDashboard, Map, Menu, Moon,
+  Mountain, RefreshCw, Satellite, Search, Settings, Sun, TriangleAlert, Waves, X,
 } from 'lucide-react';
 import { useEarthquakes } from '@/hooks/useEarthquakes';
 import { fmtClock } from '@/lib/formatting';
@@ -13,20 +13,85 @@ import { applyTheme, getThemePreference, THEME_CHANGE_EVENT } from '@/lib/theme'
 import { NotificationToggle } from '@/components/notifications/NotificationSettings';
 import { BrandMark } from '@/components/ui/common';
 
-const NAV = [
+/**
+ * Struktur navigasi berkelompok. Setiap kelompok tampil sebagai submenu
+ * (accordion) di bilah samping dan sebagai bagian berjudul pada lembar menu
+ * ponsel, sehingga daftar menu tetap rapi meski jumlah halaman bertambah.
+ */
+interface NavItem {
+  href: string;
+  label: string;
+  short: string;
+  icon: typeof Map;
+  /** Awalan jalur tambahan yang dianggap bagian dari menu ini. */
+  also?: string[];
+}
+
+interface NavGroup {
+  id: string;
+  label: string;
+  icon: typeof Map;
+  items: NavItem[];
+}
+
+const GROUP_GEMPA: NavGroup = {
+  id: 'gempa',
+  label: 'Gempa Bumi',
+  icon: Activity,
+  items: [
+    { href: '/map', label: 'Peta Gempa', short: 'Peta', icon: Map },
+    { href: '/history', label: 'Riwayat Gempa', short: 'Riwayat', icon: History },
+    { href: '/statistics', label: 'Statistik Seismik', short: 'Statistik', icon: BarChart3 },
+    { href: '/seismograph', label: 'Seismograf Perangkat', short: 'Sensor', icon: Activity },
+  ],
+};
+
+const GROUP_CUACA: NavGroup = {
+  id: 'cuaca',
+  label: 'Cuaca',
+  icon: CloudSun,
+  items: [
+    { href: '/cuaca', label: 'Prakiraan Cuaca', short: 'Prakiraan', icon: CloudSun },
+    { href: '/cuaca/peringatan-dini', label: 'Peringatan Dini Cuaca Ekstrem', short: 'Peringatan', icon: TriangleAlert },
+    { href: '/cuaca/satelit', label: 'Citra Satelit', short: 'Satelit', icon: Satellite },
+  ],
+};
+
+const GROUP_GUNUNG: NavGroup = {
+  id: 'gunung',
+  label: 'Gunung Berapi',
+  icon: Mountain,
+  items: [
+    {
+      href: '/gunung-berapi',
+      label: 'Gunung Berapi',
+      short: 'Gunung',
+      icon: Mountain,
+      also: ['/volcano-seismogram'],
+    },
+  ],
+};
+
+const GROUP_LAINNYA: NavGroup = {
+  id: 'lainnya',
+  label: 'Lainnya',
+  icon: Info,
+  items: [
+    { href: '/settings', label: 'Pengaturan', short: 'Setelan', icon: Settings },
+    { href: '/about', label: 'Tentang Seismos Indonesia', short: 'Tentang', icon: Info },
+  ],
+};
+
+const GROUPS: NavGroup[] = [GROUP_GEMPA, GROUP_CUACA, GROUP_GUNUNG, GROUP_LAINNYA];
+
+/** Empat pintasan bilah bawah ponsel (sisanya lewat tombol "Lainnya"). */
+const PRIMARY: NavItem[] = [
   { href: '/', label: 'Dashboard', short: 'Beranda', icon: LayoutDashboard },
   { href: '/map', label: 'Peta Gempa', short: 'Peta', icon: Map },
-  { href: '/history', label: 'Riwayat Gempa', short: 'Riwayat', icon: History },
   { href: '/tsunami', label: 'Peringatan Tsunami', short: 'Tsunami', icon: Waves },
+  { href: '/cuaca', label: 'Prakiraan Cuaca', short: 'Cuaca', icon: CloudSun },
   { href: '/gunung-berapi', label: 'Gunung Berapi', short: 'Gunung', icon: Mountain },
-  { href: '/seismograph', label: 'Seismograf Perangkat', short: 'Sensor', icon: Activity },
-  { href: '/statistics', label: 'Statistik Seismik', short: 'Statistik', icon: BarChart3 },
-  { href: '/settings', label: 'Pengaturan', short: 'Setelan', icon: Settings },
-  { href: '/about', label: 'Tentang Seismos Indonesia', short: 'Tentang', icon: Info },
 ];
-
-const PRIMARY = NAV.slice(0, 5);
-const SECONDARY = NAV.slice(5);
 
 function ConnectionStatus() {
   const { data, error, loading, refresh } = useEarthquakes();
@@ -106,18 +171,43 @@ function SearchBox() {
   );
 }
 
-export function Shell({ children }: { children: ReactNode }) {
+const itemActive = (pathname: string, item: NavItem): boolean => {
+  if (item.href === '/cuaca') {
+    // Menu prakiraan tidak boleh aktif saat membuka submenu peringatan/satelit.
+    return pathname === '/cuaca';
+  }
+  if (item.href === '/gunung-berapi') {
+    return pathname.startsWith('/gunung-berapi') || pathname.startsWith('/volcano-seismogram');
+  }
+  return pathname.startsWith(item.href) || (item.also ?? []).some((p) => pathname.startsWith(p));
+};
+
+const itemInGroupActive = (pathname: string, group: NavGroup): boolean =>
+  group.items.some((item) => itemActive(pathname, item));
+
+export function Shell({ children, weatherStrip }: { children: ReactNode; weatherStrip?: ReactNode }) {
   const pathname = usePathname();
   const [moreOpen, setMoreOpen] = useState(false);
-  const isActive = (href: string) => {
-    if (href === '/') return pathname === '/';
-    // Alamat lama seismogram gunung api tetap aktif di menu Gunung Berapi.
-    if (href === '/gunung-berapi') {
-      return pathname.startsWith('/gunung-berapi') || pathname.startsWith('/volcano-seismogram');
-    }
-    return pathname.startsWith(href);
-  };
-  const secondaryActive = SECONDARY.some((n) => isActive(n.href));
+  const isActive = (href: string) =>
+    itemActive(pathname, { href, label: '', short: '', icon: Map });
+  const secondaryActive = GROUPS.some((group) => itemInGroupActive(pathname, group));
+
+  /** Submenu yang dibuka. Kelompok halaman aktif selalu terbuka. */
+  const [openGroups, setOpenGroups] = useState<string[]>(() =>
+    GROUPS.filter((group) => itemInGroupActive(pathname, group)).map((group) => group.id));
+
+  // Halaman aktif berpindah (mis. lewat tautan di isi halaman): buka kelompoknya
+  // agar pengguna melihat di mana posisinya.
+  useEffect(() => {
+    const active = GROUPS.filter((group) => itemInGroupActive(pathname, group)).map((group) => group.id);
+    setOpenGroups((previous) => {
+      const missing = active.filter((id) => !previous.includes(id));
+      return missing.length === 0 ? previous : [...previous, ...missing];
+    });
+  }, [pathname]);
+
+  const toggleGroup = (id: string) =>
+    setOpenGroups((previous) => (previous.includes(id) ? previous.filter((value) => value !== id) : [...previous, id]));
 
   useEffect(() => { setMoreOpen(false); }, [pathname]);
 
@@ -136,19 +226,76 @@ export function Shell({ children }: { children: ReactNode }) {
           <span className="text-base font-semibold leading-tight">Seismos<br />Indonesia</span>
         </Link>
         <nav aria-label="Menu utama" className="flex-1 overflow-y-auto px-2 py-2">
-          {NAV.map(({ href, label, icon: Icon }) => (
-            <Link
-              key={href}
-              href={href}
-              aria-current={isActive(href) ? 'page' : undefined}
-              className={`mb-0.5 flex items-center gap-2.5 rounded-md px-3 py-2 text-sm ${
-                isActive(href) ? 'bg-accent/15 font-semibold text-ink' : 'text-muted hover:bg-line/40 hover:text-ink'
-              }`}
-            >
-              <Icon size={18} aria-hidden />
-              {label}
-            </Link>
-          ))}
+          <Link
+            href="/"
+            aria-current={isActive('/') ? 'page' : undefined}
+            className={`mb-1 flex items-center gap-2.5 rounded-md px-3 py-2 text-sm ${
+              isActive('/') ? 'bg-accent/15 font-semibold text-ink' : 'text-muted hover:bg-line/40 hover:text-ink'
+            }`}
+          >
+            <LayoutDashboard size={18} aria-hidden />
+            Dashboard
+          </Link>
+          <Link
+            href="/tsunami"
+            aria-current={isActive('/tsunami') ? 'page' : undefined}
+            className={`mb-1 flex items-center gap-2.5 rounded-md px-3 py-2 text-sm ${
+              isActive('/tsunami') ? 'bg-accent/15 font-semibold text-ink' : 'text-muted hover:bg-line/40 hover:text-ink'
+            }`}
+          >
+            <Waves size={18} aria-hidden />
+            Peringatan Tsunami
+          </Link>
+
+          {GROUPS.map((group) => {
+            const open = openGroups.includes(group.id);
+            const active = itemInGroupActive(pathname, group);
+            const panelId = `nav-grup-${group.id}`;
+            const GroupIcon = group.icon;
+            return (
+              <div key={group.id} className="mb-0.5">
+                <button
+                  type="button"
+                  onClick={() => toggleGroup(group.id)}
+                  aria-expanded={open}
+                  aria-controls={panelId}
+                  className={`flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm ${
+                    active ? 'font-semibold text-ink' : 'text-muted hover:bg-line/40 hover:text-ink'
+                  }`}
+                >
+                  <GroupIcon size={18} aria-hidden />
+                  <span className="flex-1 text-left">{group.label}</span>
+                  <ChevronDown
+                    size={14}
+                    aria-hidden
+                    className={`text-muted transition-transform ${open ? 'rotate-180' : ''}`}
+                  />
+                </button>
+                {open && (
+                  <ul id={panelId} className="mb-1 ml-3 space-y-0.5 border-l border-line pl-2">
+                    {group.items.map((item) => {
+                      const ItemIcon = item.icon;
+                      const current = itemActive(pathname, item);
+                      return (
+                        <li key={item.href}>
+                          <Link
+                            href={item.href}
+                            aria-current={current ? 'page' : undefined}
+                            className={`flex items-center gap-2 rounded-md px-2.5 py-1.5 text-[13px] ${
+                              current ? 'bg-accent/15 font-semibold text-ink' : 'text-muted hover:bg-line/40 hover:text-ink'
+                            }`}
+                          >
+                            <ItemIcon size={15} aria-hidden />
+                            <span className="leading-tight">{item.label}</span>
+                          </Link>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </div>
+            );
+          })}
         </nav>
         <p className="px-4 pb-4 text-xs leading-relaxed text-muted">
           Bukan sistem peringatan dini resmi. Untuk informasi resmi, rujuk BMKG dan PVMBG.
@@ -164,6 +311,14 @@ export function Shell({ children }: { children: ReactNode }) {
           <ThemeToggle />
         </div>
       </header>
+
+      {/* Bar cuaca persisten tepat di bawah header: selalu terlihat tanpa
+          menutupi kontrol navigasi di atasnya. */}
+      {weatherStrip && (
+        <div className="sticky top-[calc(2.75rem+env(safe-area-inset-top))] z-10 backdrop-blur">
+          {weatherStrip}
+        </div>
+      )}
 
       <main className="px-4 pb-[calc(6rem+env(safe-area-inset-bottom))] pt-5 md:px-6 md:pb-8">{children}</main>
 
@@ -210,7 +365,7 @@ export function Shell({ children }: { children: ReactNode }) {
               </button>
             </div>
             <div className="grid grid-cols-3 gap-2">
-              {SECONDARY.map(({ href, short, label, icon: Icon }, i) => (
+              {GROUP_GUNUNG.items.map(({ href, short, label, icon: Icon }, i) => (
                 <Link
                   key={href}
                   href={href}
@@ -227,6 +382,40 @@ export function Shell({ children }: { children: ReactNode }) {
                 </Link>
               ))}
             </div>
+
+            {[GROUP_GEMPA, GROUP_CUACA, GROUP_LAINNYA].map((group) => {
+              const GroupIcon = group.icon;
+              return (
+                <section key={group.id} className="mt-3" aria-labelledby={`menu-${group.id}`}>
+                  <p id={`menu-${group.id}`} className="mb-1.5 flex items-center gap-1.5 px-1 text-[11px] font-semibold uppercase tracking-wide text-muted">
+                    <GroupIcon size={12} aria-hidden />
+                    {group.label}
+                  </p>
+                  <ul className="space-y-0.5">
+                    {group.items.map((item) => {
+                      const ItemIcon = item.icon;
+                      const current = itemActive(pathname, item);
+                      return (
+                        <li key={item.href}>
+                          <Link
+                            href={item.href}
+                            aria-current={current ? 'page' : undefined}
+                            onClick={() => setMoreOpen(false)}
+                            className={`flex min-h-10 items-center gap-2.5 rounded-md border px-3 text-sm ${
+                              current ? 'border-accent bg-accent/10 font-semibold' : 'border-line text-muted'
+                            }`}
+                          >
+                            <ItemIcon size={16} aria-hidden />
+                            {item.label}
+                          </Link>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </section>
+              );
+            })}
+
             <p className="mt-3 px-1 text-xs text-muted">
               Notifikasi dapat diaktifkan lewat ikon lonceng; pengaturan lengkap ada di menu Pengaturan.
             </p>
