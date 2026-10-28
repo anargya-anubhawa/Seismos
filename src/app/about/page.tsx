@@ -59,26 +59,12 @@ const SOURCES = [
   },
 ];
 
+
 const PRIVACY = [
   {
     title: 'Lokasi GPS',
     description:
       'Aplikasi hanya meminta lokasi saat Anda menekan “Lokasi saya” di peta atau “Gunakan lokasi saya” di Pengaturan. Koordinat dipakai di browser untuk menampilkan titik Anda, menghitung jarak ke episenter, dan menebak provinsi terdekat. Koordinat tidak dikirim ke server aplikasi dan tidak disimpan sebagai riwayat. Penyedia geolokasi browser atau sistem operasi dapat memproses data sesuai kebijakan mereka.',
-  },
-  {
-    title: 'Notifikasi dan alarm',
-    description:
-      'Izin Notifikasi diminta saat Anda menekan Aktifkan. Cakupan, area, provinsi, bunyi alarm, volume, dan ID gempa yang sudah dilihat disimpan di localStorage browser ini. Notifikasi dan alarm hanya berjalan selama halaman aplikasi terbuka; tidak ada push service atau server notifikasi. Filter provinsi memakai provinsi terdekat dari koordinat, bukan batas administratif resmi, sehingga gempa di laut atau dekat perbatasan dapat masuk ke provinsi tetangga. Alarm ini bukan sirine evakuasi resmi.',
-  },
-  {
-    title: 'Sensor gerak dan suara',
-    description:
-      'Sensor hanya aktif setelah Anda menekan Mulai. Data percepatan diproses di browser dan tidak dikirim ke server aplikasi. Suara sensor dibuat secara lokal dengan Web Audio API dari amplitudo grafik; suara itu bukan alarm gempa dan tidak menentukan magnitudo.',
-  },
-  {
-    title: 'Penyimpanan lokal',
-    description:
-      'Hingga 5 sesi sensor, tema, dan preferensi notifikasi disimpan di localStorage browser ini. Anda dapat menghapus sesi sensor dari Pengaturan. Tidak ada akun, database, atau sinkronisasi antarperangkat.',
   },
   {
     title: 'Peta dan sumber eksternal',
@@ -91,6 +77,7 @@ const PRIVACY = [
       'Aplikasi memakai header keamanan dasar, validasi ID stasiun pada proxy gambar, dan tidak menyimpan data pengguna di server. Ini bukan jaminan keamanan menyeluruh. Laporkan masalah lewat kontak pengembang di bagian bawah halaman ini.',
   },
 ];
+
 
 export default function AboutPage() {
   return (
