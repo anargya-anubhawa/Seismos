@@ -259,6 +259,9 @@ export function NotificationSettings() {
       </div>
 
       <p className="text-xs text-muted">
+        Notifikasi gempa di atas bersifat lokal (hanya saat halaman terbuka). Untuk peringatan tsunami resmi lewat
+        push server, gunakan pengaturan <strong>Notifikasi tsunami (push)</strong> yang terpisah, atau buka halaman
+        {' '}<Link href="/tsunami" className="font-medium text-accent underline">Peringatan Tsunami</Link>.
         Untuk peringatan resmi 24 jam, gunakan aplikasi Info BMKG atau kanal resmi BMKG. Alarm ini bukan sirine
         evakuasi dan aplikasi ini bukan sistem peringatan dini.
       </p>

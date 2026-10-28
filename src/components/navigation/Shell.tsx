@@ -5,7 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import {
   Activity, BarChart3, History, Info, LayoutDashboard, Map, Menu, Moon, Mountain, RefreshCw,
-  Search, Settings, Sun, X,
+  Search, Settings, Sun, Waves, X,
 } from 'lucide-react';
 import { useEarthquakes } from '@/hooks/useEarthquakes';
 import { fmtClock } from '@/lib/formatting';
@@ -17,7 +17,8 @@ const NAV = [
   { href: '/', label: 'Dashboard', short: 'Beranda', icon: LayoutDashboard },
   { href: '/map', label: 'Peta Gempa', short: 'Peta', icon: Map },
   { href: '/history', label: 'Riwayat Gempa', short: 'Riwayat', icon: History },
-  { href: '/volcano-seismogram', label: 'Seismogram Gunung Api', short: 'Gunung', icon: Mountain },
+  { href: '/tsunami', label: 'Peringatan Tsunami', short: 'Tsunami', icon: Waves },
+  { href: '/gunung-berapi', label: 'Gunung Berapi', short: 'Gunung', icon: Mountain },
   { href: '/seismograph', label: 'Seismograf Perangkat', short: 'Sensor', icon: Activity },
   { href: '/statistics', label: 'Statistik Seismik', short: 'Statistik', icon: BarChart3 },
   { href: '/settings', label: 'Pengaturan', short: 'Setelan', icon: Settings },
@@ -108,7 +109,14 @@ function SearchBox() {
 export function Shell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [moreOpen, setMoreOpen] = useState(false);
-  const isActive = (href: string) => (href === '/' ? pathname === '/' : pathname.startsWith(href));
+  const isActive = (href: string) => {
+    if (href === '/') return pathname === '/';
+    // Alamat lama seismogram gunung api tetap aktif di menu Gunung Berapi.
+    if (href === '/gunung-berapi') {
+      return pathname.startsWith('/gunung-berapi') || pathname.startsWith('/volcano-seismogram');
+    }
+    return pathname.startsWith(href);
+  };
   const secondaryActive = SECONDARY.some((n) => isActive(n.href));
 
   useEffect(() => { setMoreOpen(false); }, [pathname]);

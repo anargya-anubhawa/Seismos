@@ -2,8 +2,9 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { ExternalLink, Info, Monitor, Moon, ShieldCheck, Sun, Trash2 } from 'lucide-react';
+import { ExternalLink, Info, Monitor, Moon, Mountain, ShieldCheck, Sun, Trash2 } from 'lucide-react';
 import { NotificationSettings } from '@/components/notifications/NotificationSettings';
+import { TsunamiPushSettings } from '@/components/tsunami/TsunamiPushSettings';
 import { PageTitle, Panel } from '@/components/ui/common';
 import { applyTheme, getThemePreference, THEME_CHANGE_EVENT, type ThemePreference } from '@/lib/theme';
 import { clearSessions, loadSessions, MAX_SESSIONS } from '@/lib/seismograph/sessions';
@@ -42,15 +43,35 @@ export function SettingsContent() {
     <>
       <PageTitle
         title="Pengaturan"
-        hint="Atur notifikasi, alarm, tampilan, dan data lokal di browser ini. Setelan tidak disinkronkan antarperangkat."
+        hint="Atur notifikasi gempa lokal, push tsunami, push gunung api, alarm, tampilan, dan data lokal di browser ini. Setelan tidak disinkronkan antarperangkat."
       />
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <Panel title="Notifikasi & alarm">
-          <div className="px-4 py-3">
-            <NotificationSettings />
-          </div>
-        </Panel>
+        <div className="space-y-4">
+          <Panel title="Notifikasi & alarm gempa">
+            <div className="px-4 py-3">
+              <NotificationSettings />
+            </div>
+          </Panel>
+
+          <Panel title="Notifikasi tsunami (push)">
+            <div className="px-4 py-3">
+              <TsunamiPushSettings />
+            </div>
+          </Panel>
+
+          <Panel title="Notifikasi gunung api (push)">
+            <div className="space-y-2 px-4 py-3 text-sm">
+              <p className="text-muted">
+                Notifikasi perubahan tingkat aktivitas, informasi letusan resmi, dan VONA memakai sistem push yang sama.
+                Aktifkan dan atur kategorinya di halaman Gunung Berapi.
+              </p>
+              <Link href="/gunung-berapi/notifikasi" className="inline-flex items-center gap-1 font-medium text-accent underline">
+                <Mountain size={15} aria-hidden /> Atur notifikasi gunung api
+              </Link>
+            </div>
+          </Panel>
+        </div>
 
         <div className="space-y-4">
           <Panel title="Tampilan">

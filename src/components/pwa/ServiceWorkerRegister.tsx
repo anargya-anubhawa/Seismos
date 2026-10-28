@@ -2,14 +2,21 @@
 
 import { useEffect } from 'react';
 
-/** Mendaftarkan service worker hanya di produksi; tidak menyimpan respons /api. */
+/**
+ * Mendaftarkan service worker di produksi dan dev. Di dev, query `?dev=1`
+ * membuat SW melewati cache agar HMR tidak terganggu; push tetap berfungsi.
+ */
 export function ServiceWorkerRegister() {
   useEffect(() => {
-    if (process.env.NODE_ENV !== 'production' || !('serviceWorker' in navigator)) return;
+    if (!('serviceWorker' in navigator)) return;
+    const url = process.env.NODE_ENV === 'production' ? '/sw.js' : '/sw.js?dev=1';
 
     const register = () => {
-      void navigator.serviceWorker.register('/sw.js').catch(() => {
-        /* PWA tetap bisa dipakai tanpa cache offline. */
+      void navigator.serviceWorker.register(url, { scope: '/' }).then((registration) => {
+        // Pastikan SW terbaru aktif saat aplikasi dibuka.
+        void registration.update().catch(() => { /* offline atau server sibuk */ });
+      }).catch(() => {
+        /* PWA tetap bisa dipakai tanpa cache offline; push akan menampilkan error di pengaturan. */
       });
     };
 
