@@ -1,8 +1,10 @@
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   isTsunamiInfo, normalizeTsunamiInfo, parseBmkgDateTime, parseCoordinate, parseDatagempaPayload,
-  parseIssueTime, parseTsunamiHistoryHtml,
+  parseInatewsCapXml, parseIssueTime, parseTsunamiHistoryHtml,
 } from '../src/lib/tsunami/parse';
 import { decodeNuxtData } from '../src/lib/tsunami/nuxt';
 import {
@@ -10,6 +12,8 @@ import {
 } from '../src/lib/tsunami/identity';
 import { buildTsunamiFeed } from '../src/lib/tsunami/feed';
 import { buildTsunamiPushPayload } from '../src/lib/tsunami/push-payload';
+import { StorageUnavailableError, createMemoryStore, createStorageProbe } from '../src/lib/storage';
+import { loadState, saveState, loadVapidKeys, saveVapidKeys } from '../src/lib/tsunami/store';
 import type { TsunamiAlert, TsunamiSourceStatus } from '../src/types/tsunami';
 
 const baseInfo = (over: Record<string, unknown> = {}) => ({
@@ -282,4 +286,91 @@ test('payload push memuat judul resmi, status, waktu, wilayah, ringkasan, dan ta
   const cancelled = buildTsunamiPushPayload(ended, 'cancelled');
   assert.match(cancelled.body, /Status: BERAKHIR/);
   assert.equal(cancelled.requireInteraction, false);
+});
+
+/* ---------------------------------------- penyimpanan baca-saja (serverless) -- */
+
+// Vercel menjalankan kode dari /var/task yang baca-saja. Penyimpanan harus
+// jatuh ke memori, bukan melempar ENOENT yang mematikan seluruh endpoint.
+process.env.TSUNAMI_DATA_DIR = '/var/task/.data/tsunami';
+
+test('createStorageProbe melaporkan direktori baca-saja sebagai peringatan, bukan crash', async () => {
+  const probe = createStorageProbe('/var/task/.data/tsunami', 'Status tsunami');
+  try {
+    await probe.ensure();
+    // Bila kebetulan dapat ditulis, tidak ada peringatan.
+    assert.equal(probe.warning(), null);
+  } catch (error) {
+    assert.ok(error instanceof StorageUnavailableError);
+    assert.match(probe.warning() ?? '', /tidak dapat ditulis/);
+    assert.equal(probe.available(), false);
+  }
+});
+
+test('createMemoryStore menyimpan dan menghapus nilai', () => {
+  const memory = createMemoryStore();
+  memory.set('state', '{"a":1}');
+  assert.equal(memory.get('state'), '{"a":1}');
+  memory.clear();
+  assert.equal(memory.get('state'), undefined);
+});
+
+test('loadState dan saveState tidak melempar saat direktori tidak dapat ditulis', async () => {
+  const state = await loadState();
+  assert.equal(state.version, 1);
+  await saveState({ ...state, checkCount: state.checkCount + 1 });
+  const reloaded = await loadState();
+  assert.equal(reloaded.checkCount, state.checkCount + 1);
+});
+
+test('saveVapidKeys menyimpan kunci di memori saat disk tidak tersedia', async () => {
+  const keys = { publicKey: 'BPublic'.repeat(14), privateKey: 'Priv'.repeat(12), createdAt: new Date().toISOString() };
+  await saveVapidKeys(keys);
+  const loaded = await loadVapidKeys();
+  assert.equal(loaded?.publicKey, keys.publicKey);
+  assert.equal(loaded?.privateKey, keys.privateKey);
+});
+
+/* ------------------------------------------------------ InaTEWS (CAP XML) -- */
+
+const inatewsXml = readFileSync(path.join(__dirname, 'fixtures', 'inatews-cap.xml'), 'utf8');
+
+test('parseInatewsCapXml membaca 30 arsip tsunami dari CAP (fixture 2 info)', () => {
+  const parsed = parseInatewsCapXml(inatewsXml);
+  assert.equal(parsed.length, 2);
+  assert.ok(parsed.every((candidate) => candidate.source === 'inatews'));
+});
+
+test('parseInatewsCapXml memetakan fase, status, dan koordinat resmi', () => {
+  const [pd4, pd3] = parseInatewsCapXml(inatewsXml);
+  assert.equal(pd4.phase, 'PD-4');
+  assert.equal(pd4.status, 'ended');
+  assert.equal(pd4.eventId, '20260815073130');
+  assert.equal(pd4.magnitude, 7.7);
+  assert.equal(pd4.depthKm, 15);
+  assert.equal(pd4.latitude, -8.41);
+  assert.equal(pd4.longitude, 121.39);
+  assert.equal(pd4.region, '30 km TimurLaut MBAY-NAGEKEO-NTT');
+
+  assert.equal(pd3.phase, 'PD-3.4');
+  assert.equal(pd3.status, 'active');
+});
+
+test('parseInatewsCapXml mengakumulasi wzarea dan obsarea yang berulang', () => {
+  const [, pd3] = parseInatewsCapXml(inatewsXml);
+  assert.equal(pd3.regions.length, 22);
+  assert.equal(pd3.observations.length, 10);
+  // Wilayah terurut AWAS -> SIAGA -> WASPADA, lalu abjad provinsi/distrik.
+  assert.equal(pd3.regions[0].level, 'SIAGA');
+  assert.equal(pd3.regions[0].district, 'ENDE BAGIAN UTARA');
+  assert.equal(pd3.regions[pd3.regions.length - 1].level, 'WASPADA');
+  assert.ok(pd3.regions.some((region) => region.district === 'MANGGARAI BAGIAN UTARA'));
+  assert.equal(pd3.observations[0].location, 'BAKALANG-ALOR');
+  assert.equal(pd3.observations[0].heightM, 0.14);
+  assert.equal(pd3.observations[0].latitude, -8.26);
+});
+
+test('parseInatewsCapXml menolak dokumen yang bukan CAP', () => {
+  assert.throws(() => parseInatewsCapXml('<html>bukan cap</html>'), /bukan dokumen CAP/);
+  assert.throws(() => parseInatewsCapXml('<alert><info><subject>Info biasa</subject></info></alert>'), /tidak memuat peringatan tsunami/);
 });

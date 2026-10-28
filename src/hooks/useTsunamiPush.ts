@@ -6,6 +6,7 @@ interface PushConfigResponse {
   publicKey?: string;
   enabled?: boolean;
   error?: string;
+  warning?: string | null;
 }
 
 interface PushState {
@@ -16,6 +17,8 @@ interface PushState {
   busy: boolean;
   error: string | null;
   message: string | null;
+  /** Catatan server bila penyimpanan tidak persisten (mis. hosting serverless). */
+  storageWarning: string | null;
   enable: () => Promise<void>;
   disable: () => Promise<void>;
   test: () => Promise<void>;
@@ -50,13 +53,13 @@ async function registrationReady(): Promise<ServiceWorkerRegistration> {
   ]);
 }
 
-async function fetchConfig(): Promise<string> {
+async function fetchConfig(): Promise<{ publicKey: string; warning: string | null }> {
   const response = await fetch('/api/tsunami/push/config', { cache: 'no-store' });
   const payload = await response.json().catch(() => null) as PushConfigResponse | null;
   if (!response.ok || !payload?.publicKey) {
     throw new Error(payload?.error ?? 'Konfigurasi push tsunami belum tersedia di server.');
   }
-  return payload.publicKey;
+  return { publicKey: payload.publicKey, warning: payload.warning ?? null };
 }
 
 async function postSubscription(subscription: PushSubscription): Promise<void> {
@@ -84,6 +87,8 @@ export function useTsunamiPush(): PushState {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  /** Catatan server bila penyimpanan tidak persisten (mis. hosting serverless). */
+  const [storageWarning, setStorageWarning] = useState<string | null>(null);
   const mounted = useRef(true);
 
   const syncSubscription = useCallback(async () => {
@@ -114,6 +119,8 @@ export function useTsunamiPush(): PushState {
       const config = results[0];
       if (config.status === 'rejected') {
         setError(config.reason instanceof Error ? config.reason.message : 'Konfigurasi push tsunami tidak tersedia.');
+      } else {
+        setStorageWarning(config.value.warning);
       }
       setReady(true);
     });
@@ -149,7 +156,8 @@ export function useTsunamiPush(): PushState {
           : 'Izin notifikasi belum diberikan.');
       }
 
-      const publicKey = await fetchConfig();
+      const { publicKey, warning } = await fetchConfig();
+      if (mounted.current) setStorageWarning(warning);
       const desiredKey = urlBase64ToUint8Array(publicKey);
       const registration = await registrationReady();
       let subscription = await registration.pushManager.getSubscription();
@@ -226,5 +234,5 @@ export function useTsunamiPush(): PushState {
     }
   }, [busy]);
 
-  return { ready, supported, permission, subscribed, busy, error, message, enable, disable, test };
+  return { ready, supported, permission, subscribed, busy, error, message, storageWarning, enable, disable, test };
 }

@@ -87,8 +87,6 @@ export default function DashboardPage() {
         </Panel>
       </div>
 
-      <MmiSummary events={events} className="mt-4 min-w-0" />
-
       <div className="mt-4 grid w-full min-w-0 grid-cols-1 gap-4 xl:grid-cols-5">
         <Panel title="Persebaran episenter" className="overflow-hidden xl:col-span-3">
           <div className="h-80 xl:h-[28rem]"><QuakeMapLazy events={events} /></div>
@@ -102,6 +100,9 @@ export default function DashboardPage() {
           </div>
         </Panel>
       </div>
+
+      {/* Ringkasan MMI diletakkan tepat di bawah bagian gempa terbaru. */}
+      <MmiSummary events={events} className="mt-4 min-w-0" />
 
       <div className="mt-4 grid w-full min-w-0 grid-cols-1 gap-4 lg:grid-cols-2">
         <Panel title="Notifikasi & alarm gempa">

@@ -87,7 +87,8 @@ export default function MapPage() {
           </Panel>
         </div>
 
-        <MmiSummary events={events} className="order-2 min-w-0 lg:order-1" />
+        {/* Ringkasan MMI selalu berada di bawah daftar kejadian, di desktop maupun mobile. */}
+        <MmiSummary events={events} className="min-w-0" />
       </div>
 
       <Attribution />

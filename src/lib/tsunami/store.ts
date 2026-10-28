@@ -1,7 +1,8 @@
 import { randomBytes } from 'node:crypto';
-import { chmod, mkdir, open, readFile, rename, stat, unlink } from 'node:fs/promises';
+import { open, readFile, rename, stat, unlink } from 'node:fs/promises';
 import path from 'node:path';
 import type { TsunamiAlert, TsunamiSourceStatus } from '@/types/tsunami';
+import { StorageUnavailableError, createMemoryStore, createStorageProbe } from '../storage';
 import type { TsunamiNotificationKind } from './identity';
 
 export interface StoredTsunamiAlert extends TsunamiAlert {
@@ -63,17 +64,46 @@ export function tsunamiDataDir(): string {
 const filePath = (name: string): string => path.join(DATA_DIR, `${name}.json`);
 const lockPath = (name: string): string => path.join(DATA_DIR, `${name}.lock`);
 
+const storage = createStorageProbe(DATA_DIR, 'Status tsunami dan langganan push');
+const memoryStore = createMemoryStore();
+
+/**
+ * Catatan singkat bila penyimpanan persisten tidak tersedia (null = normal).
+ * Dipakai halaman pengaturan untuk memberi tahu pengguna bahwa langganan push
+ * hanya bertahan selama instance server hidup.
+ */
+export function storageWarning(): string | null {
+  return storage.warning();
+}
+
+/** Nama berkas yang sedang dilayani dari memori (bukan dari disk). */
+const memoryOnly = new Set<string>();
+
 async function ensureDataDir(): Promise<void> {
-  await mkdir(DATA_DIR, { recursive: true, mode: 0o700 });
-  await chmod(DATA_DIR, 0o700).catch(() => { /* filesystem tanpa izin chmod */ });
+  await storage.ensure();
 }
 
 async function readJson<T>(name: string, fallback: T): Promise<T> {
+  if (memoryOnly.has(name)) {
+    const raw = memoryStore.get(name);
+    return raw === undefined ? fallback : (JSON.parse(raw) as T);
+  }
   try {
     const raw = await readFile(filePath(name), 'utf8');
     return JSON.parse(raw) as T;
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return fallback;
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code === 'ENOENT') {
+      // Direktori data tidak ada: bisa berarti belum ada data, atau sistem
+      // berkas baca-saja (Vercel). Probe yang menentukan; bila tidak tersedia,
+      // berkas ini dilayani dari memori.
+      if (!storage.available()) {
+        memoryOnly.add(name);
+        const raw = memoryStore.get(name);
+        return raw === undefined ? fallback : (JSON.parse(raw) as T);
+      }
+      return fallback;
+    }
     if (error instanceof SyntaxError) {
       // Simpan berkas rusak untuk investigasi; jangan hapus data pengguna diam-diam.
       const backup = `${name}.corrupt-${Date.now()}.json`;
@@ -86,12 +116,22 @@ async function readJson<T>(name: string, fallback: T): Promise<T> {
 }
 
 async function atomicWrite(name: string, value: unknown): Promise<void> {
-  await ensureDataDir();
+  const payload = `${JSON.stringify(value, null, 2)}\n`;
+  try {
+    await ensureDataDir();
+  } catch (error) {
+    if (!(error instanceof StorageUnavailableError)) throw error;
+    // Direktori tidak dapat ditulis (mis. /var/task di Vercel): simpan di memori
+    // agar aplikasi tetap berjalan, dengan peringatan yang dapat ditampilkan UI.
+    memoryOnly.add(name);
+    memoryStore.set(name, payload);
+    return;
+  }
   const target = filePath(name);
   const temp = `${target}.${process.pid}.${randomBytes(6).toString('hex')}.tmp`;
   const handle = await open(temp, 'w', 0o600);
   try {
-    await handle.writeFile(`${JSON.stringify(value, null, 2)}\n`, 'utf8');
+    await handle.writeFile(payload, 'utf8');
     await handle.sync();
   } finally {
     await handle.close();
@@ -102,10 +142,19 @@ async function atomicWrite(name: string, value: unknown): Promise<void> {
     await unlink(temp).catch(() => { /* abaikan */ });
     throw error;
   }
+  memoryOnly.delete(name);
+  memoryStore.clear();
 }
 
 async function acquireFileLock(name: string): Promise<() => Promise<void>> {
-  await ensureDataDir();
+  try {
+    await ensureDataDir();
+  } catch (error) {
+    if (!(error instanceof StorageUnavailableError)) throw error;
+    // Tanpa disk tidak ada kunci antraproses yang mungkin; antrean dalam proses
+    // di `withTsunamiLock` sudah cukup untuk satu instance.
+    return async () => { /* tidak ada kunci berkas */ };
+  }
   const target = lockPath(name);
   const started = Date.now();
   while (Date.now() - started < LOCK_WAIT_MS) {
@@ -153,6 +202,7 @@ export async function withTsunamiLock<T>(name: string, fn: () => Promise<T>): Pr
 
 const DATAGEMPA_SOURCE_URL = (process.env.TSUNAMI_DATAGEMPA_URL ?? 'https://cdn.bmkg.go.id/datagempa.json').trim();
 const HISTORY_SOURCE_URL = (process.env.TSUNAMI_HISTORY_URL ?? 'https://www.bmkg.go.id/gempabumi/berpotensi-tsunami').trim();
+const INATEWS_SOURCE_URL = (process.env.TSUNAMI_INATEWS_URL ?? 'https://cdn.bmkg.go.id/last30tsunamievent.xml').trim();
 
 export const DEFAULT_SOURCES: TsunamiSourceStatus[] = [
   {
@@ -169,6 +219,16 @@ export const DEFAULT_SOURCES: TsunamiSourceStatus[] = [
     id: 'history',
     label: 'Riwayat peringatan tsunami BMKG',
     url: HISTORY_SOURCE_URL,
+    fetchedAt: null,
+    ok: false,
+    stale: true,
+    error: null,
+    count: 0,
+  },
+  {
+    id: 'inatews',
+    label: 'Arsip InaTEWS (CAP XML)',
+    url: INATEWS_SOURCE_URL,
     fetchedAt: null,
     ok: false,
     stale: true,
@@ -243,7 +303,7 @@ function normalizeState(raw: Partial<TsunamiStoreState>): TsunamiStoreState {
     for (const source of raw.sources) {
       if (!source || typeof source !== 'object') continue;
       const id = (source as TsunamiSourceStatus).id;
-      if (id === 'datagempa' || id === 'history') {
+      if (id === 'datagempa' || id === 'history' || id === 'inatews') {
         sourceMap.set(id, { ...sourceMap.get(id)!, ...source });
       }
     }

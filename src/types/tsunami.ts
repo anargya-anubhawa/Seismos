@@ -1,5 +1,5 @@
 /** Sumber data tsunami resmi yang dipantau server. */
-export type TsunamiSourceId = 'datagempa' | 'history';
+export type TsunamiSourceId = 'datagempa' | 'history' | 'inatews';
 
 /** Tingkat peringatan yang dipakai BMKG pada daftar wilayah. */
 export type TsunamiLevel = 'AWAS' | 'SIAGA' | 'WASPADA';
@@ -123,4 +123,6 @@ export interface TsunamiPushSubscriptionInput {
 export interface TsunamiPushConfig {
   publicKey: string;
   enabled: boolean;
+  /** Terisi bila penyimpanan server tidak dapat ditulis (mis. hosting serverless). */
+  warning?: string | null;
 }

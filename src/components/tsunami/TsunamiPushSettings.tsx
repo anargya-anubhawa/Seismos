@@ -7,7 +7,7 @@ import { useTsunamiPush } from '@/hooks/useTsunamiPush';
 const btn = 'flex min-h-10 items-center justify-center gap-1.5 rounded-md px-3 text-sm font-medium disabled:opacity-40';
 
 export function TsunamiPushSettings({ compact = false }: { compact?: boolean }) {
-  const { ready, supported, permission, subscribed, busy, error, message, enable, disable, test } = useTsunamiPush();
+  const { ready, supported, permission, subscribed, busy, error, message, storageWarning, enable, disable, test } = useTsunamiPush();
 
   if (!ready) {
     return <p role="status" className="text-sm text-muted">Memeriksa dukungan push tsunami…</p>;
@@ -35,6 +35,16 @@ export function TsunamiPushSettings({ compact = false }: { compact?: boolean }) 
         ada gempa besar. Push dapat muncul saat halaman tertutup, tetapi tetap bergantung pada browser, sistem operasi,
         koneksi, dan izin perangkat.
       </p>
+
+      {storageWarning && (
+        <p role="status" className="flex items-start gap-2 rounded border border-[#B08A00]/50 bg-[#B08A00]/5 px-3 py-2 text-xs text-muted">
+          <TriangleAlert size={15} aria-hidden className="mt-0.5 shrink-0" />
+          <span>
+            Penyimpanan server tidak persisten. Push tetap aktif selama instance server hidup, tetapi pendaftaran
+            perangkat dapat hilang saat server dimulai ulang. Aktifkan ulang push bila notifikasi berhenti datang.
+          </span>
+        </p>
+      )}
 
       <div className={`rounded-md border px-3 py-2.5 ${subscribed ? 'border-ok/50 bg-ok/5' : 'border-line bg-bg/60'}`} role="status" aria-live="polite">
         <div className="flex flex-wrap items-center justify-between gap-2">

@@ -7,6 +7,7 @@ import { decodeNuxtData, findNuxtAlertInfos } from './nuxt';
 
 export const DATAGEMPA_URL = 'https://cdn.bmkg.go.id/datagempa.json';
 export const TSUNAMI_HISTORY_URL = 'https://www.bmkg.go.id/gempabumi/berpotensi-tsunami';
+export const INATEWS_TSUNAMI_URL = 'https://cdn.bmkg.go.id/last30tsunamievent.xml';
 
 const DATAGEMPA_SOURCE_URL = (process.env.TSUNAMI_DATAGEMPA_URL ?? DATAGEMPA_URL).trim();
 const HISTORY_SOURCE_URL = (process.env.TSUNAMI_HISTORY_URL ?? TSUNAMI_HISTORY_URL).trim();
@@ -264,6 +265,14 @@ function parsePhase(subject: string): string | null {
   return match ? `PD-${match[1]}` : null;
 }
 
+const INATEWS_SOURCE_URL = (process.env.TSUNAMI_INATEWS_URL ?? INATEWS_TSUNAMI_URL).trim();
+
+const SOURCE_META: Record<TsunamiSourceId, { url: string; name: string }> = {
+  datagempa: { url: DATAGEMPA_SOURCE_URL, name: 'BMKG · feed WRS' },
+  history: { url: HISTORY_SOURCE_URL, name: 'BMKG · halaman peringatan tsunami' },
+  inatews: { url: INATEWS_SOURCE_URL, name: 'BMKG · InaTEWS (arsip CAP)' },
+};
+
 /** Menormalkan satu objek info BMKG menjadi kandidat peringatan tsunami. */
 export function normalizeTsunamiInfo(
   info: Record<string, unknown>,
@@ -306,8 +315,8 @@ export function normalizeTsunamiInfo(
     regions: normalizeRegions(info),
     observations: normalizeObservations(info),
     maps: normalizeMaps(info),
-    sourceUrl: source === 'datagempa' ? DATAGEMPA_SOURCE_URL : HISTORY_SOURCE_URL,
-    sourceName: source === 'datagempa' ? 'BMKG · feed WRS' : 'BMKG · halaman peringatan tsunami',
+    sourceUrl: SOURCE_META[source].url,
+    sourceName: SOURCE_META[source].name,
   };
 }
 
@@ -324,6 +333,107 @@ export function parseDatagempaPayload(json: unknown): TsunamiCandidate | null {
   const info = Array.isArray(rawInfo) ? rawInfo[0] : rawInfo;
   if (!info || typeof info !== 'object') throw new Error('Field info datagempa tidak dikenali');
   return normalizeTsunamiInfo(info as Record<string, unknown>, 'datagempa', root.sent);
+}
+
+/* ------------------------------------------------------- InaTEWS (CAP XML) -- */
+
+const XML_ENTITIES: Record<string, string> = {
+  amp: '&', lt: '<', gt: '>', quot: '"', apos: "'",
+};
+
+function decodeXmlText(raw: string): string {
+  return raw
+    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
+    .replace(/&(#x?[0-9a-fA-F]+|[a-zA-Z]+);/g, (match, entity: string) => {
+      if (entity.startsWith('#x') || entity.startsWith('#X')) {
+        const code = Number.parseInt(entity.slice(2), 16);
+        return Number.isFinite(code) ? String.fromCodePoint(code) : match;
+      }
+      if (entity.startsWith('#')) {
+        const code = Number.parseInt(entity.slice(1), 10);
+        return Number.isFinite(code) ? String.fromCodePoint(code) : match;
+      }
+      return XML_ENTITIES[entity.toLowerCase()] ?? match;
+    })
+    .trim();
+}
+
+/** Tag yang boleh muncul berulang di dalam `<info>` dan disimpan sebagai array. */
+const XML_REPEATED_TAGS = new Set(['wzarea', 'obsarea']);
+
+/**
+ * Mengubah satu blok `<info>` CAP menjadi objek setara `datagempa.json`:
+ * tag tunggal menjadi string, tag berulang (`wzarea`, `obsarea`) menjadi array,
+ * dan tag bersarang (`point/coordinates`) menjadi objek.
+ */
+function parseCapInfoBlock(block: string): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  const push = (key: string, value: unknown) => {
+    if (!XML_REPEATED_TAGS.has(key)) {
+      // Tag tunggal: kemunculan pertama menang agar perilaku stabil.
+      if (!(key in out)) out[key] = value;
+      return;
+    }
+    const current = out[key];
+    if (Array.isArray(current)) current.push(value);
+    else out[key] = [value];
+  };
+
+  // Bersarang: <point><coordinates>lon,lat</coordinates></point>
+  const pointMatch = block.match(/<point>([\s\S]*?)<\/point>/i);
+  if (pointMatch) {
+    const coordinates = pointMatch[1].match(/<coordinates>([\s\S]*?)<\/coordinates>/i);
+    if (coordinates) out.point = { coordinates: decodeXmlText(coordinates[1]) };
+  }
+
+  // <wzarea>…</wzarea> dan <obsarea>…</obsarea>
+  for (const tag of XML_REPEATED_TAGS) {
+    const blocks = new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`, 'gi');
+    for (const match of block.matchAll(blocks)) {
+      const inner = match[1];
+      const record: Record<string, unknown> = {};
+      for (const field of inner.matchAll(/<([A-Za-z][A-Za-z0-9]*)>([\s\S]*?)<\/\1>/g)) {
+        record[field[1].toLowerCase()] = decodeXmlText(field[2]);
+      }
+      if (Object.keys(record).length > 0) push(tag, record);
+    }
+  }
+
+  // Tag datar; blok bersarang dilewati agar turunannya tidak terbaca sebagai milik <info>.
+  const flat = block
+    .replace(/<point>[\s\S]*?<\/point>/gi, '')
+    .replace(new RegExp(`<(${[...XML_REPEATED_TAGS].join('|')})>[\\s\\S]*?</\\1>`, 'gi'), '');
+  for (const match of flat.matchAll(/<([A-Za-z][A-Za-z0-9]*)>([\s\S]*?)<\/\1>/g)) {
+    const key = match[1].toLowerCase();
+    if (XML_REPEATED_TAGS.has(key)) continue;
+    push(key, decodeXmlText(match[2]));
+  }
+  return out;
+}
+
+/**
+ * Parse `cdn.bmkg.go.id/last30tsunamievent.xml` (CAP 1.2, sumber InaTEWS).
+ * Satu `<alert>` memuat hingga 30 `<info>`; hanya info yang benar-benar
+ * peringatan tsunami yang dikembalikan.
+ */
+export function parseInatewsCapXml(xml: string): TsunamiCandidate[] {
+  if (typeof xml !== 'string' || !xml.includes('<alert')) {
+    throw new Error('Respons InaTEWS bukan dokumen CAP yang dikenali');
+  }
+  const sent = xml.match(/<sent>([\s\S]*?)<\/sent>/i);
+  const fallbackIssueTime = sent ? decodeXmlText(sent[1]) : undefined;
+  const blocks = [...xml.matchAll(/<info>([\s\S]*?)<\/info>/gi)];
+  if (blocks.length === 0) throw new Error('Tidak ada blok info tsunami di dokumen InaTEWS');
+
+  const candidates: TsunamiCandidate[] = [];
+  for (const block of blocks) {
+    const candidate = normalizeTsunamiInfo(parseCapInfoBlock(block[1]), 'inatews', fallbackIssueTime);
+    if (candidate) candidates.push(candidate);
+  }
+  if (candidates.length === 0) {
+    throw new Error('Dokumen InaTEWS tidak memuat peringatan tsunami');
+  }
+  return candidates;
 }
 
 /** Parse halaman riwayat BMKG dan kembalikan semua pembaruan tsunami. */

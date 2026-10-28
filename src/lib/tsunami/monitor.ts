@@ -1,5 +1,5 @@
 import type { TsunamiSourceId, TsunamiSourceStatus } from '@/types/tsunami';
-import { fetchDatagempa, fetchTsunamiHistory } from '@/services/tsunami';
+import { fetchDatagempa, fetchInatewsTsunami, fetchTsunamiHistory, type InatewsResult } from '@/services/tsunami';
 import {
   applyCandidate, classifyChange, createAlert, findMatchingAlert, fingerprintAlert,
   type TsunamiNotificationKind,
@@ -17,6 +17,9 @@ const API_MIN_GAP_MS = 25_000;
 const SCHEDULED_MIN_GAP_MS = 10_000;
 const RETENTION_DAYS = Math.max(7, Math.min(365, Number(process.env.TSUNAMI_RETENTION_DAYS ?? 90)));
 const MAX_PUSH_ATTEMPTS = 5;
+
+/** Urutan keutamaan sumber bila dua kandidat punya waktu terbit sama. */
+const SOURCE_PRIORITY: Record<TsunamiSourceId, number> = { datagempa: 0, history: 1, inatews: 2 };
 
 const errorText = (error: unknown): string => {
   const message = error instanceof Error ? error.message : String(error);
@@ -116,7 +119,7 @@ async function ingest(
   const ordered = [...candidates].sort((a, b) => {
     const time = Date.parse(a.issueTime) - Date.parse(b.issueTime);
     if (time !== 0) return time;
-    return a.source === b.source ? 0 : a.source === 'datagempa' ? -1 : 1;
+    return SOURCE_PRIORITY[a.source] - SOURCE_PRIORITY[b.source];
   });
 
   for (const candidate of ordered) {
@@ -259,10 +262,20 @@ export async function runTsunamiCheck(reason = 'manual', force = false): Promise
           : Promise.resolve(null),
       ]);
 
+      // Sumber cadangan InaTEWS dipakai hanya bila riwayat gagal, agar beban ke
+      // BMKG tidak bertambah saat sumber utama sehat. Hasilnya tetap dicatat
+      // pada entri sumber `inatews` supaya halaman status jujur soal asalnya.
+      const inatews: SourceOutcome<InatewsResult> | null = history && !history.ok
+        ? await fetchInatewsTsunami()
+          .then((result): SourceOutcome<InatewsResult> => ({ ok: true, data: result, error: null, fetchedAt: result.fetchedAt }))
+          .catch((error): SourceOutcome<never> => ({ ok: false, data: null, error: errorText(error), fetchedAt: null }))
+        : null;
+
       const nowIso = new Date(now).toISOString();
       const errors: string[] = [];
       if (!datagempa.ok && datagempa.error) errors.push(`datagempa: ${datagempa.error}`);
       if (history && !history.ok && history.error) errors.push(`riwayat: ${history.error}`);
+      if (inatews && !inatews.ok && inatews.error) errors.push(`InaTEWS: ${inatews.error}`);
 
       const sourceMap = new Map<TsunamiSourceId, TsunamiSourceStatus>(
         state.sources.map((source) => [source.id, source]),
@@ -293,9 +306,21 @@ export async function runTsunamiCheck(reason = 'manual', force = false): Promise
         }
       }
 
+      if (inatews) {
+        const inatewsPrevious = sourceMap.get('inatews')!;
+        if (inatews.ok && inatews.data) {
+          sourceMap.set('inatews', successStatus(inatewsPrevious, inatews.data.fetchedAt, inatews.data.candidates.length));
+          lastSuccessAt = maxIso(lastSuccessAt, inatews.data.fetchedAt);
+          lastHistorySuccessAt = maxIso(lastHistorySuccessAt, inatews.data.fetchedAt);
+        } else {
+          sourceMap.set('inatews', failureStatus(inatewsPrevious, inatews.error ?? 'Gagal mengambil arsip InaTEWS'));
+        }
+      }
+
       const candidates: TsunamiCandidate[] = [];
       if (datagempa.ok && datagempa.data?.candidate) candidates.push(datagempa.data.candidate);
       if (history?.ok && history.data) candidates.push(...history.data.candidates);
+      if (inatews?.ok && inatews.data) candidates.push(...inatews.data.candidates);
 
       const ingested = await ingest(state, candidates, nowIso);
       const alerts = pruneAlerts(ingested.alerts, now);
@@ -309,8 +334,8 @@ export async function runTsunamiCheck(reason = 'manual', force = false): Promise
         lastSuccessAt,
         lastHistoryAttemptAt: historyDue ? nowIso : state.lastHistoryAttemptAt,
         lastHistorySuccessAt,
-        seededAt: state.seededAt ?? ((datagempa.ok || (history?.ok ?? false)) ? nowIso : null),
-        historyImportedAt: state.historyImportedAt ?? ((history?.ok ?? false) ? nowIso : null),
+        seededAt: state.seededAt ?? ((datagempa.ok || (history?.ok ?? false) || (inatews?.ok ?? false)) ? nowIso : null),
+        historyImportedAt: state.historyImportedAt ?? ((history?.ok ?? false) || (inatews?.ok ?? false) ? nowIso : null),
         checkCount: state.checkCount + 1,
       };
       await saveState(nextState);

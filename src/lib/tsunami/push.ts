@@ -3,7 +3,7 @@ import type { TsunamiAlert, TsunamiPushConfig, TsunamiPushSubscriptionInput } fr
 import type { TsunamiNotificationKind } from './identity';
 import { buildTsunamiPushPayload } from './push-payload';
 import {
-  loadSubscriptions, loadVapidKeys, saveSubscriptions, saveVapidKeys, withTsunamiLock,
+  loadSubscriptions, loadVapidKeys, saveSubscriptions, saveVapidKeys, storageWarning, withTsunamiLock,
   type StoredPushSubscription, type StoredVapidKeys,
 } from './store';
 
@@ -62,7 +62,7 @@ export function getVapidKeys(): Promise<StoredVapidKeys> {
 
 export async function getPushConfig(): Promise<TsunamiPushConfig> {
   const keys = await getVapidKeys();
-  return { publicKey: keys.publicKey, enabled: true };
+  return { publicKey: keys.publicKey, enabled: true, warning: storageWarning() };
 }
 
 export function isValidPushSubscription(value: unknown): value is TsunamiPushSubscriptionInput {

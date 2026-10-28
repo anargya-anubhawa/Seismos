@@ -13,6 +13,7 @@ import {
   ReportCard, VonaCard, VolcanoLevelBadge, VolcanoLink,
 } from './parts';
 import { Disclaimer, OfflineNotice, VolcanoEmpty, VolcanoErrorBox, VolcanoPage } from './layout';
+import { LoadMoreButton, useProgressiveList } from './progressive';
 
 const LEVEL_ACCENT: Record<VolcanoLevel, string> = {
   1: 'border-ok/50',
@@ -30,6 +31,10 @@ export function VolcanoOverview() {
     const list = data?.volcanoes ?? [];
     return level ? list.filter((volcano) => volcano.level === level) : list;
   }, [data?.volcanoes, level]);
+
+  // 10 entri pertama saja agar halaman tidak padat; sisanya lewat "Muat lebih
+  // banyak". Kunci reset memuat filter tingkat agar hitungan kembali ke awal.
+  const list = useProgressiveList(volcanoes, { resetKey: String(level ?? 'all') });
 
   if (query.loading && !data) {
     return (
@@ -111,27 +116,38 @@ export function VolcanoOverview() {
               </VolcanoEmpty>
             </div>
           ) : (
-            <ul className="divide-y divide-line">
-              {volcanoes.map((volcano) => (
-                <li key={volcano.code} className="flex items-center gap-3 px-4 py-2.5">
-                  <div className="min-w-0 flex-1">
-                    <VolcanoLink code={volcano.code} name={volcano.name} />
-                    <p className="truncate text-xs text-muted">
-                      {volcano.province}
-                      {volcano.elevation !== null ? ` · ${Math.round(volcano.elevation)} m` : ''}
-                    </p>
-                  </div>
-                  <VolcanoLevelBadge level={volcano.level} compact />
-                  <Link
-                    href={`/gunung-berapi/${volcano.code.toLowerCase()}`}
-                    className="shrink-0 rounded border border-line px-2 py-1 text-xs font-medium hover:bg-line/40"
-                    aria-label={`Buka detail Gunung ${volcano.name}`}
-                  >
-                    Detail
-                  </Link>
-                </li>
-              ))}
-            </ul>
+            <>
+              <ul className="divide-y divide-line">
+                {list.visible.map((volcano) => (
+                  <li key={volcano.code} className="flex items-center gap-3 px-4 py-2.5">
+                    <div className="min-w-0 flex-1">
+                      <VolcanoLink code={volcano.code} name={volcano.name} />
+                      <p className="truncate text-xs text-muted">
+                        {volcano.province}
+                        {volcano.elevation !== null ? ` · ${Math.round(volcano.elevation)} m` : ''}
+                      </p>
+                    </div>
+                    <VolcanoLevelBadge level={volcano.level} compact />
+                    <Link
+                      href={`/gunung-berapi/${volcano.code.toLowerCase()}`}
+                      className="shrink-0 rounded border border-line px-2 py-1 text-xs font-medium hover:bg-line/40"
+                      aria-label={`Buka detail Gunung ${volcano.name}`}
+                    >
+                      Detail
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+              <LoadMoreButton
+                hasMore={list.hasMore}
+                nextCount={list.nextCount}
+                shown={list.shown}
+                total={volcanoes.length}
+                onLoadMore={list.showMore}
+                label="gunung api"
+                divided
+              />
+            </>
           )}
         </Panel>
 

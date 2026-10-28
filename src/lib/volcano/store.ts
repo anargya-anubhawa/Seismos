@@ -1,7 +1,8 @@
 import { randomBytes } from 'node:crypto';
-import { chmod, mkdir, open, readFile, rename, stat, unlink } from 'node:fs/promises';
+import { open, readFile, rename, stat, unlink } from 'node:fs/promises';
 import path from 'node:path';
 import type { VolcanoNotification } from '@/types/volcano';
+import { StorageUnavailableError, createMemoryStore, createStorageProbe } from '../storage';
 
 /**
  * Penyimpanan server gunung api (JSON + kunci berkas), mengikuti pola
@@ -91,17 +92,41 @@ const SHARED_VAPID_FILE = process.env.TSUNAMI_DATA_DIR
 const filePath = (name: string): string => path.join(DATA_DIR, `${name}.json`);
 const lockPath = (name: string): string => path.join(DATA_DIR, `${name}.lock`);
 
+const storage = createStorageProbe(DATA_DIR, 'Status gunung api dan langganan push');
+const memoryStore = createMemoryStore();
+
+/**
+ * Catatan singkat bila penyimpanan persisten tidak tersedia (null = normal).
+ * Hosting serverless (Vercel) menjalankan kode dari direktori baca-saja, jadi
+ * langganan push hanya bertahan selama instance hidup.
+ */
+export function volcanoStorageWarning(): string | null {
+  return storage.warning();
+}
+
+const memoryOnly = new Set<string>();
+
 async function ensureDataDir(): Promise<void> {
-  await mkdir(DATA_DIR, { recursive: true, mode: 0o700 });
-  await chmod(DATA_DIR, 0o700).catch(() => { /* filesystem tanpa dukungan chmod */ });
+  await storage.ensure();
 }
 
 async function readJson<T>(name: string, fallback: T): Promise<T> {
+  if (memoryOnly.has(name)) {
+    const raw = memoryStore.get(name);
+    return raw === undefined ? fallback : (JSON.parse(raw) as T);
+  }
   try {
     const raw = await readFile(filePath(name), 'utf8');
     return JSON.parse(raw) as T;
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return fallback;
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      if (!storage.available()) {
+        memoryOnly.add(name);
+        const raw = memoryStore.get(name);
+        return raw === undefined ? fallback : (JSON.parse(raw) as T);
+      }
+      return fallback;
+    }
     if (error instanceof SyntaxError) {
       const backup = `${name}.corrupt-${Date.now()}.json`;
       await rename(filePath(name), filePath(backup)).catch(() => { /* abaikan */ });
@@ -113,8 +138,18 @@ async function readJson<T>(name: string, fallback: T): Promise<T> {
 }
 
 async function atomicWrite(name: string, value: unknown): Promise<void> {
-  await ensureDataDir();
+  const payload = `${JSON.stringify(value, null, 2)}\n`;
+  try {
+    await ensureDataDir();
+  } catch (error) {
+    if (!(error instanceof StorageUnavailableError)) throw error;
+    memoryOnly.add(name);
+    memoryStore.set(name, payload);
+    return;
+  }
   await atomicWriteFile(filePath(name), value);
+  memoryOnly.delete(name);
+  memoryStore.clear();
 }
 
 async function atomicWriteFile(target: string, value: unknown): Promise<void> {
@@ -135,7 +170,12 @@ async function atomicWriteFile(target: string, value: unknown): Promise<void> {
 }
 
 async function acquireFileLock(name: string): Promise<() => Promise<void>> {
-  await ensureDataDir();
+  try {
+    await ensureDataDir();
+  } catch (error) {
+    if (!(error instanceof StorageUnavailableError)) throw error;
+    return async () => { /* tidak ada kunci berkas */ };
+  }
   const target = lockPath(name);
   const started = Date.now();
   while (Date.now() - started < LOCK_WAIT_MS) {
@@ -303,7 +343,14 @@ export async function saveSubscriptions(subscriptions: StoredVolcanoPushSubscrip
  * Kunci VAPID disimpan satu kali untuk seluruh aplikasi dan dipakai bersama
  * oleh notifikasi gempa/tsunami maupun gunung api (satu langganan browser).
  */
+const VAPID_MEMORY_KEY = '__shared_vapid__';
+
 export async function loadVapidKeys(): Promise<StoredVapidKeys | null> {
+  const fromMemory = memoryStore.get(VAPID_MEMORY_KEY);
+  if (fromMemory) {
+    const parsed = JSON.parse(fromMemory) as StoredVapidKeys;
+    if (typeof parsed.publicKey === 'string' && typeof parsed.privateKey === 'string') return parsed;
+  }
   try {
     const raw = JSON.parse(await readFile(SHARED_VAPID_FILE, 'utf8')) as Partial<StoredVapidKeys>;
     if (typeof raw.publicKey === 'string' && typeof raw.privateKey === 'string') {
@@ -316,6 +363,18 @@ export async function loadVapidKeys(): Promise<StoredVapidKeys | null> {
 }
 
 export async function saveVapidKeys(keys: StoredVapidKeys): Promise<void> {
-  await ensureDataDir();
+  const payload = `${JSON.stringify(keys, null, 2)}\n`;
+  try {
+    await ensureDataDir();
+  } catch (error) {
+    if (!(error instanceof StorageUnavailableError)) throw error;
+    // Tanpa disk, kunci hanya hidup di memori instance ini. Kunci yang sama
+    // berlaku untuk tsunami dan gunung api, jadi langganan push tetap cocok
+    // selama instance hidup. Agar stabil antarinstance, set VAPID_PUBLIC_KEY
+    // dan VAPID_PRIVATE_KEY di environment produksi.
+    memoryStore.set(VAPID_MEMORY_KEY, payload);
+    return;
+  }
   await atomicWriteFile(SHARED_VAPID_FILE, keys);
+  memoryStore.set(VAPID_MEMORY_KEY, payload);
 }
