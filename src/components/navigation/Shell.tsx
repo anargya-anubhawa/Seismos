@@ -4,8 +4,9 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import {
-  Activity, BarChart3, ChevronDown, CloudSun, History, Info, LayoutDashboard, Map, Menu, Moon,
-  Mountain, RefreshCw, Satellite, Search, Settings, Sun, TriangleAlert, Waves, X,
+  Activity, BarChart3, Bell, Camera, ChevronDown, CloudSun, FileText, Flame, History, Image as ImageIcon,
+  Info, LayoutDashboard, Map, Menu, Moon, Mountain, Radio, RefreshCw, Satellite, Search, Send, Settings,
+  ShieldAlert, Sun, TriangleAlert, Waves, X,
 } from 'lucide-react';
 import { useEarthquakes } from '@/hooks/useEarthquakes';
 import { fmtClock } from '@/lib/formatting';
@@ -62,13 +63,18 @@ const GROUP_GUNUNG: NavGroup = {
   label: 'Gunung Berapi',
   icon: Mountain,
   items: [
-    {
-      href: '/gunung-berapi',
-      label: 'Gunung Berapi',
-      short: 'Gunung',
-      icon: Mountain,
-      also: ['/volcano-seismogram'],
-    },
+    { href: '/gunung-berapi', label: 'Ringkasan', short: 'Gunung', icon: Activity, also: ['/volcano-seismogram'] },
+    { href: '/gunung-berapi/peta', label: 'Peta Sebaran', short: 'Peta Gunung', icon: Map },
+    { href: '/gunung-berapi/status', label: 'Status Aktivitas', short: 'Status', icon: Mountain },
+    { href: '/gunung-berapi/laporan', label: 'Laporan Aktivitas', short: 'Laporan', icon: FileText },
+    { href: '/gunung-berapi/laporan-harian', label: 'Laporan Harian', short: 'Harian', icon: FileText },
+    { href: '/gunung-berapi/krb', label: 'Peta KRB', short: 'KRB', icon: ShieldAlert },
+    { href: '/gunung-berapi/erupsi', label: 'Riwayat Erupsi', short: 'Erupsi', icon: Flame },
+    { href: '/gunung-berapi/seismogram', label: 'Live Seismogram', short: 'Seismogram', icon: Radio },
+    { href: '/gunung-berapi/vona', label: 'VONA', short: 'VONA', icon: Send },
+    { href: '/gunung-berapi/cctv', label: 'CCTV', short: 'CCTV', icon: Camera },
+    { href: '/gunung-berapi/gallery', label: 'Galeri', short: 'Galeri', icon: ImageIcon },
+    { href: '/gunung-berapi/notifikasi', label: 'Notifikasi', short: 'Notif', icon: Bell },
   ],
 };
 
@@ -171,25 +177,38 @@ function SearchBox() {
   );
 }
 
-const itemActive = (pathname: string, item: NavItem): boolean => {
-  if (item.href === '/cuaca') {
-    // Menu prakiraan tidak boleh aktif saat membuka submenu peringatan/satelit.
-    return pathname === '/cuaca';
+/** Cocok persis, atau sebagai awalan diikuti garis miring (bukan awalan kata). */
+const under = (pathname: string, href: string): boolean =>
+  pathname === href || pathname.startsWith(`${href}/`);
+
+/**
+ * Apakah sebuah menu aktif untuk jalur saat ini.
+ *
+ * Menu bertingkat (`/gunung-berapi` vs `/gunung-berapi/krb`) memakai
+ * pencocokan paling spesifik: satu jalur hanya menandai SATU menu sebagai
+ * aktif, yaitu menu dengan awalan terpanjang. Tanpa ini, membuka Peta KRB
+ * akan ikut menyalakan menu Ringkasan.
+ */
+const activeHref = (pathname: string, items: NavItem[]): string | null => {
+  let best: string | null = null;
+  for (const item of items) {
+    const candidates = [item.href, ...(item.also ?? [])];
+    for (const href of candidates) {
+      if (!under(pathname, href)) continue;
+      if (best === null || href.length > best.length) best = item.href;
+    }
   }
-  if (item.href === '/gunung-berapi') {
-    return pathname.startsWith('/gunung-berapi') || pathname.startsWith('/volcano-seismogram');
-  }
-  return pathname.startsWith(item.href) || (item.also ?? []).some((p) => pathname.startsWith(p));
+  return best;
 };
 
 const itemInGroupActive = (pathname: string, group: NavGroup): boolean =>
-  group.items.some((item) => itemActive(pathname, item));
+  activeHref(pathname, group.items) !== null;
 
 export function Shell({ children, weatherStrip }: { children: ReactNode; weatherStrip?: ReactNode }) {
   const pathname = usePathname();
   const [moreOpen, setMoreOpen] = useState(false);
-  const isActive = (href: string) =>
-    itemActive(pathname, { href, label: '', short: '', icon: Map });
+  const active = activeHref(pathname, GROUPS.flatMap((group) => group.items));
+  const isActive = (href: string) => active === href || (href === '/' && pathname === '/');
   const secondaryActive = GROUPS.some((group) => itemInGroupActive(pathname, group));
 
   /** Submenu yang dibuka. Kelompok halaman aktif selalu terbuka. */
@@ -249,8 +268,7 @@ export function Shell({ children, weatherStrip }: { children: ReactNode; weather
 
           {GROUPS.map((group) => {
             const open = openGroups.includes(group.id);
-            const active = itemInGroupActive(pathname, group);
-            const panelId = `nav-grup-${group.id}`;
+            const groupActive = itemInGroupActive(pathname, group);            const panelId = `nav-grup-${group.id}`;
             const GroupIcon = group.icon;
             return (
               <div key={group.id} className="mb-0.5">
@@ -260,7 +278,7 @@ export function Shell({ children, weatherStrip }: { children: ReactNode; weather
                   aria-expanded={open}
                   aria-controls={panelId}
                   className={`flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm ${
-                    active ? 'font-semibold text-ink' : 'text-muted hover:bg-line/40 hover:text-ink'
+                    groupActive ? 'font-semibold text-ink' : 'text-muted hover:bg-line/40 hover:text-ink'
                   }`}
                 >
                   <GroupIcon size={18} aria-hidden />
@@ -275,7 +293,7 @@ export function Shell({ children, weatherStrip }: { children: ReactNode; weather
                   <ul id={panelId} className="mb-1 ml-3 space-y-0.5 border-l border-line pl-2">
                     {group.items.map((item) => {
                       const ItemIcon = item.icon;
-                      const current = itemActive(pathname, item);
+                      const current = active === item.href;
                       return (
                         <li key={item.href}>
                           <Link
@@ -320,7 +338,13 @@ export function Shell({ children, weatherStrip }: { children: ReactNode; weather
         </div>
       )}
 
-      <main className="px-4 pb-[calc(6rem+env(safe-area-inset-bottom))] pt-5 md:px-6 md:pb-8">{children}</main>
+      {/*
+        Kontainer konten: dibatasi lebarnya agar di monitor lebar kartu tidak
+        melar dan teks tidak membentang terlalu jauh, lalu dipusatkan. Padding
+        horizontal naik bertahap mengikuti lebar layar supaya tepi konten tidak
+        pernah menempel ke tepi jendela.
+      */}
+      <main className="mx-auto w-full max-w-[1400px] px-4 pb-[calc(6rem+env(safe-area-inset-bottom))] pt-5 sm:px-6 lg:px-8 md:pb-8">{children}</main>
 
       <nav aria-label="Menu utama" className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-6 border-t border-line bg-surface pb-[env(safe-area-inset-bottom)] md:hidden">
         {PRIMARY.map(({ href, short, icon: Icon }) => (
@@ -394,7 +418,7 @@ export function Shell({ children, weatherStrip }: { children: ReactNode; weather
                   <ul className="space-y-0.5">
                     {group.items.map((item) => {
                       const ItemIcon = item.icon;
-                      const current = itemActive(pathname, item);
+                      const current = active === item.href;
                       return (
                         <li key={item.href}>
                           <Link

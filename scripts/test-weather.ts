@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   SATELLITE_PRODUCTS, dayLabel, dateLabel, distanceKm, groupByLocalDate, isInIndonesia, isSignificantWeather,
-  nearestArea, normalizeWeatherAlert, normalizeWeatherPoint, parseRssItems, zoneFromOffset,
+  nearestArea, normalizeWeatherAlert, normalizeWeatherPoint, parseRssItems, satelliteDetailUrl, zoneFromOffset,
 } from '../src/lib/weather/parse';
 import { weatherAlertText, weatherForecastText, SOURCE_BMKG_WEATHER } from '../src/lib/share/report-text';
 import type { WeatherAlert, WeatherArea, WeatherForecast, WeatherPoint } from '../src/types/weather';
@@ -250,4 +250,26 @@ test('katalog satelit berisi produk unik dengan alamat INDERAJA BMKG', () => {
     [...new Set(SATELLITE_PRODUCTS.map((p) => p.group))].sort(),
     ['gk2a', 'gsmap', 'himawari', 'lingkungan'],
   );
+});
+
+test('katalog satelit memuat seluruh produk halaman BMKG (21 produk)', () => {
+  // Halaman https://www.bmkg.go.id/cuaca/satelit menampilkan 21 produk; katalog
+  // harus sama agar tidak ada produk yang tidak bisa dibuka detailnya.
+  assert.equal(SATELLITE_PRODUCTS.length, 21);
+  assert.ok(SATELLITE_PRODUCTS.some((p) => p.id === 'polar-hotspot'));
+  assert.ok(SATELLITE_PRODUCTS.some((p) => p.id === 'citra-sebaran-asap'));
+});
+
+test('satelliteDetailUrl mengarah ke halaman detail resmi BMKG', () => {
+  assert.equal(
+    satelliteDetailUrl('polar-hotspot'),
+    'https://www.bmkg.go.id/cuaca/satelit/polar-hotspot',
+  );
+  // ID produk sengaja identik dengan slug BMKG, jadi tautan detail dapat
+  // dibentuk langsung tanpa tabel pemetaan yang bisa melenceng.
+  for (const product of SATELLITE_PRODUCTS) {
+    const url = satelliteDetailUrl(product.id);
+    assert.match(url, /^https:\/\/www\.bmkg\.go\.id\/cuaca\/satelit\/[a-z0-9-]+$/);
+    assert.equal(url.split('/').pop(), product.id);
+  }
 });

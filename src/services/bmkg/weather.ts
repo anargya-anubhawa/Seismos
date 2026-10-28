@@ -6,7 +6,7 @@ import { cached } from '@/lib/cache';
 import { fetchJson, fetchText } from '@/services/bmkg/client';
 import {
   SATELLITE_PRODUCTS, isInIndonesia, nearestArea, normalizeWeatherAlert, normalizeWeatherArea,
-  parseRegionFile, parseRssItems, zoneFromOffset,
+  parseRegionFile, parseRssItems, satelliteDetailUrl, zoneFromOffset,
 } from '@/lib/weather/parse';
 import type {
   SatelliteFrame, SatelliteProduct, WeatherAlert, WeatherAlertFeed, WeatherArea, WeatherForecast,
@@ -235,6 +235,7 @@ export function satelliteProducts(): SatelliteProduct[] {
   return SATELLITE_PRODUCTS.map((product) => ({
     ...product,
     imagePath: `/api/weather/satelit/${product.id}/image`,
+    detailUrl: satelliteDetailUrl(product.id),
   }));
 }
 

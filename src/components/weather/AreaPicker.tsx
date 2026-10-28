@@ -109,7 +109,7 @@ export function AreaPicker({ onSelect }: { onSelect?: (area: SavedArea) => void 
           type="button"
           onClick={() => void requestLocation()}
           disabled={asking}
-          className="inline-flex min-h-9 items-center gap-1.5 rounded-md border border-line px-3 text-sm font-medium hover:bg-line/40 disabled:opacity-60"
+          className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-md border border-line px-3 text-sm font-medium hover:bg-line/40 disabled:opacity-60"
         >
           <LocateFixed size={15} aria-hidden className={asking ? 'animate-pulse' : ''} />
           {asking ? 'Membaca lokasi…' : 'Gunakan lokasi saya'}
@@ -117,7 +117,10 @@ export function AreaPicker({ onSelect }: { onSelect?: (area: SavedArea) => void 
         <span className="text-xs text-muted">atau cari wilayah:</span>
       </div>
 
-      <div className="relative">
+      {/* `min-w-0` mencegah input melebar melampaui panel induknya, dan
+          `overflow-hidden` pada pembungkus hasil menjaga daftar saran tidak
+          menembus tepi kartu. */}
+      <div className="relative min-w-0">
         <label htmlFor="weather-area-search" className="sr-only">
           Cari kecamatan, kabupaten, atau provinsi
         </label>
@@ -129,10 +132,10 @@ export function AreaPicker({ onSelect }: { onSelect?: (area: SavedArea) => void 
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Cari kecamatan, kabupaten, atau provinsi…"
           autoComplete="off"
-          className="min-h-9 w-full rounded-md border border-line bg-surface pl-8 pr-3 text-sm"
+          className="min-h-9 w-full min-w-0 rounded-md border border-line bg-surface pl-8 pr-3 text-sm"
         />
         {(searching || results.length > 0 || searchError) && (
-          <div className="absolute z-20 mt-1 max-h-72 w-full overflow-auto rounded-md border border-line bg-surface shadow-lg">
+          <div className="absolute inset-x-0 z-20 mt-1 max-h-72 overflow-y-auto overflow-x-hidden rounded-md border border-line bg-surface shadow-lg">
             {searching && <p className="px-3 py-2 text-xs text-muted">Mencari wilayah…</p>}
             {!searching && searchError && <p className="px-3 py-2 text-xs text-danger">{searchError}</p>}
             {!searching && !searchError && results.length === 0 && query.trim().length >= 2 && (
@@ -146,10 +149,10 @@ export function AreaPicker({ onSelect }: { onSelect?: (area: SavedArea) => void 
                   <button
                     type="button"
                     onClick={() => pick(area)}
-                    className="flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left hover:bg-line/40"
+                    className="flex w-full min-w-0 flex-col items-start gap-0.5 px-3 py-2 text-left hover:bg-line/40"
                   >
-                    <span className="text-sm font-medium">{area.district}</span>
-                    <span className="text-[11px] text-muted">
+                    <span className="max-w-full truncate text-sm font-medium">{area.district}</span>
+                    <span className="max-w-full truncate text-[11px] text-muted">
                       {area.regency} · {area.province} · {area.code}
                     </span>
                   </button>
@@ -163,7 +166,7 @@ export function AreaPicker({ onSelect }: { onSelect?: (area: SavedArea) => void 
       {geoMessage && (
         <p role="status" className={`flex items-start gap-1.5 text-xs ${outside ? 'text-danger' : 'text-muted'}`}>
           <TriangleAlert size={12} aria-hidden className="mt-0.5 shrink-0" />
-          <span>{geoMessage}</span>
+          <span className="min-w-0 [overflow-wrap:anywhere]">{geoMessage}</span>
         </p>
       )}
     </div>

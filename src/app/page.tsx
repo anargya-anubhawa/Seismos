@@ -56,9 +56,14 @@ export default function DashboardPage() {
       />
       <StaleDataNotice error={error} updatedAt={data.updatedAt} />
 
-      <div className="mb-4 grid w-full min-w-0 grid-cols-1 gap-4 lg:grid-cols-2">
+      {/*
+        Kartu cuaca mendapat kolom tetap yang nyaman dibaca, sedangkan panel
+        "Perlu perhatian" mengisi sisa ruang. Di layar menengah keduanya tetap
+        satu kolom agar kartu cuaca tidak terjepit.
+      */}
+      <div className="mb-4 grid w-full min-w-0 grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,24rem)_minmax(0,1fr)]">
         <WeatherDashboardCard />
-        <HotEventsPanel />
+        <HotEventsPanel className="mt-0" />
       </div>
 
       <div className="grid w-full min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">

@@ -102,6 +102,8 @@ export interface SatelliteProduct {
   group: 'himawari' | 'gk2a' | 'gsmap' | 'lingkungan';
   /** URL citra asli BMKG. */
   sourceUrl: string;
+  /** Halaman detail resmi produk ini di situs BMKG (bmkg.go.id/cuaca/satelit/…). */
+  detailUrl: string;
   /** Path proxy internal agar citra selalu terkirim dari server Seismos. */
   imagePath: string;
   width: number;

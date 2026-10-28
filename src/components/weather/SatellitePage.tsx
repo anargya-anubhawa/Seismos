@@ -1,10 +1,12 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
-import { ExternalLink, RefreshCw, Satellite } from 'lucide-react';
+import { ExternalLink, Info, RefreshCw, Satellite } from 'lucide-react';
 import { PageTitle, Panel, Skeleton, StateBox } from '@/components/ui/common';
 import { CopyLinkButton, ShareMenu } from '@/components/share/ShareActions';
 import { DeferredImage } from '@/components/volcano/DeferredImage';
+import { SatelliteDetailDialog } from './SatelliteDetailDialog';
 import { LoadMoreButton, useProgressiveList } from '@/components/volcano/progressive';
 import { fmtAgo } from '@/lib/formatting';
 import { SATELLITE_GROUP_LABEL } from '@/lib/weather/parse';
@@ -32,6 +34,8 @@ export function SatellitePage() {
   const [payload, setPayload] = useState<CataloguePayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  /** Produk yang detailnya sedang dibuka di dialog. */
+  const [detail, setDetail] = useState<SatelliteProduct | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -117,6 +121,7 @@ export function SatellitePage() {
               group={group}
               products={products}
               frames={frames}
+              onDetail={setDetail}
             />
           ))}
 
@@ -126,17 +131,26 @@ export function SatellitePage() {
           </p>
         </>
       )}
+
+      {detail && (
+        <SatelliteDetailDialog
+          product={detail}
+          frame={frames.get(detail.id) ?? null}
+          onClose={() => setDetail(null)}
+        />
+      )}
     </>
   );
 }
 
 function SatelliteGroup({
-  label, group, products, frames,
+  label, group, products, frames, onDetail,
 }: {
   label: string;
   group: SatelliteProduct['group'];
   products: SatelliteProduct[];
   frames: Map<string, SatelliteFrame>;
+  onDetail: (product: SatelliteProduct) => void;
 }) {
   const list = useProgressiveList(products, { resetKey: group });
   return (
@@ -155,9 +169,17 @@ function SatelliteGroup({
               buttonLabel="Tampilkan citra"
               actions={
                 <>
+                  <button
+                    type="button"
+                    onClick={() => onDetail(product)}
+                    className="inline-flex min-h-9 items-center gap-1.5 rounded-md border border-line px-2.5 text-xs font-medium hover:bg-line/40"
+                  >
+                    <Info size={13} aria-hidden />
+                    Lihat detail
+                  </button>
                   <CopyLinkButton
                     label="Salin tautan"
-                    path={`/cuaca/satelit#${product.id}`}
+                    path={`/cuaca/satelit/${product.id}`}
                   />
                   <ShareMenu
                     compact
@@ -185,14 +207,22 @@ function SatelliteGroup({
                   ) : (
                     <p className="text-[11px] text-muted">Waktu citra tidak tercantum pada sumber.</p>
                   )}
-                  <a
-                    href={product.sourceUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-[11px] underline"
-                  >
-                    Buka citra asli di INDERAJA BMKG <ExternalLink size={10} aria-hidden />
-                  </a>
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                    <Link
+                      href={`/cuaca/satelit/${product.id}`}
+                      className="inline-flex items-center gap-1 text-[11px] font-medium text-accent underline"
+                    >
+                      Halaman detail produk
+                    </Link>
+                    <a
+                      href={product.sourceUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-[11px] underline"
+                    >
+                      Citra asli INDERAJA BMKG <ExternalLink size={10} aria-hidden />
+                    </a>
+                  </div>
                 </div>
               }
             />

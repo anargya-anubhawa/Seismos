@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useMemo } from 'react';
-import { CloudSun, Droplets, ExternalLink, LocateFixed, Mountain, TriangleAlert, Waves, Wind } from 'lucide-react';
+import { CloudRain, CloudSun, Droplets, ExternalLink, LocateFixed, Mountain, TriangleAlert, Waves, Wind } from 'lucide-react';
 import { Panel } from '@/components/ui/common';
 import { AreaPicker } from '@/components/weather/AreaPicker';
 import { WeatherIcon, formatClock, zoneLabel } from '@/components/weather/parts';
@@ -72,75 +72,99 @@ export function WeatherDashboardCard() {
   }
 
   return (
-    <Panel title="Cuaca di lokasi Anda" className="min-w-0">
-      <div className="space-y-3 px-4 py-3">
-        <div className="flex flex-wrap items-start justify-between gap-2">
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold">{area.district}</p>
-            <p className="truncate text-[11px] text-muted">
-              {area.regency} · {area.province}
-              {area.mode === 'geo' && area.distanceKm !== undefined
-                ? ` · ±${Math.round(area.distanceKm)} km dari lokasi`
-                : ''}
-            </p>
-          </div>
-          <Link href="/cuaca" className="inline-flex items-center gap-1 text-xs font-medium text-accent underline">
-            <CloudSun size={13} aria-hidden />
-            Prakiraan lengkap
-          </Link>
+    <Panel className="min-w-0">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b border-line px-4 py-2.5">
+        <h2 className="flex min-w-0 items-center gap-1.5 text-sm font-semibold">
+          <CloudSun size={15} aria-hidden className="shrink-0 text-accent" />
+          <span className="truncate">Cuaca di lokasi Anda</span>
+        </h2>
+        <Link href="/cuaca" className="shrink-0 text-xs font-medium text-accent underline">
+          Prakiraan lengkap
+        </Link>
+      </div>
+
+      <div className="space-y-3 p-4">
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold">{area.district}</p>
+          <p className="truncate text-[11px] text-muted">
+            {area.regency} · {area.province}
+            {area.mode === 'geo' && area.distanceKm !== undefined
+              ? ` · ±${Math.round(area.distanceKm)} km dari lokasi`
+              : ''}
+          </p>
         </div>
 
         {nowPoint ? (
           <>
-            <div className="flex items-center gap-3">
-              <WeatherIcon point={nowPoint} size={46} />
-              <div className="min-w-0">
-                <p className="text-3xl font-semibold leading-none">
+            {/*
+              `min-w-0` + `shrink` pada tiap bagian: ikon, suhu, dan waktu
+              boleh menyusut, sehingga tidak ada yang terdorong keluar kartu
+              saat kartu berada di kolom sempit.
+            */}
+            <div className="flex min-w-0 items-center gap-3 rounded-lg border border-line bg-bg/40 px-3 py-2.5">
+              <span className="shrink-0"><WeatherIcon point={nowPoint} size={44} /></span>
+              <div className="min-w-0 flex-1">
+                <p className="text-3xl font-semibold leading-none tabular-nums">
                   {nowPoint.temperatureC !== null ? `${Math.round(nowPoint.temperatureC)}°C` : '—'}
                 </p>
                 <p className="mt-1 truncate text-sm text-muted">{nowPoint.description}</p>
               </div>
-              <div className="ml-auto text-right text-[11px] text-muted">
-                <p>{formatClock(nowPoint.time, timezone)} {zoneLabel(timezone)}</p>
-                <p>{forecast.updatedAt ? `data ${fmtAgo(forecast.updatedAt)}` : ''}</p>
-              </div>
+              <p className="shrink-0 text-right text-[11px] leading-tight text-muted">
+                {formatClock(nowPoint.time, timezone)}
+                <br />
+                {zoneLabel(timezone)}
+                {forecast.updatedAt && (
+                  <>
+                    <br />
+                    <span className="text-[10px]">{fmtAgo(forecast.updatedAt)}</span>
+                  </>
+                )}
+              </p>
             </div>
 
-            <dl className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
-              {nowPoint.humidityPct !== null && (
-                <div className="flex items-center gap-1">
-                  <Droplets size={12} aria-hidden className="text-muted" />
-                  <dt className="sr-only">Kelembapan</dt>
-                  <dd>{Math.round(nowPoint.humidityPct)}%</dd>
-                </div>
-              )}
-              {nowPoint.windSpeedKmh !== null && (
-                <div className="flex items-center gap-1">
-                  <Wind size={12} aria-hidden className="text-muted" />
-                  <dt className="sr-only">Angin</dt>
-                  <dd>{nowPoint.windFrom ? `${nowPoint.windFrom} ` : ''}{Math.round(nowPoint.windSpeedKmh)} km/jam</dd>
-                </div>
-              )}
-              {nowPoint.precipitationMm !== null && (
-                <div className="flex items-center gap-1">
-                  <Droplets size={12} aria-hidden className="text-muted" />
-                  <dt className="sr-only">Hujan</dt>
-                  <dd>{nowPoint.precipitationMm > 0 ? `${nowPoint.precipitationMm} mm` : 'tanpa hujan'}</dd>
-                </div>
-              )}
+            <dl className="grid grid-cols-3 gap-2 text-center">
+              <div className="min-w-0 rounded-md border border-line px-2 py-1.5">
+                <dt className="flex items-center justify-center gap-1 text-[10px] text-muted">
+                  <Droplets size={10} aria-hidden /> Lembap
+                </dt>
+                <dd className="truncate text-xs font-semibold tabular-nums">
+                  {nowPoint.humidityPct !== null ? `${Math.round(nowPoint.humidityPct)}%` : '—'}
+                </dd>
+              </div>
+              <div className="min-w-0 rounded-md border border-line px-2 py-1.5">
+                <dt className="flex items-center justify-center gap-1 text-[10px] text-muted">
+                  <Wind size={10} aria-hidden /> Angin
+                </dt>
+                <dd className="truncate text-xs font-semibold">
+                  {nowPoint.windSpeedKmh !== null
+                    ? `${nowPoint.windFrom ? `${nowPoint.windFrom} ` : ''}${Math.round(nowPoint.windSpeedKmh)}`
+                    : '—'}
+                  {nowPoint.windSpeedKmh !== null && <span className="text-[10px] font-normal text-muted"> km/j</span>}
+                </dd>
+              </div>
+              <div className="min-w-0 rounded-md border border-line px-2 py-1.5">
+                <dt className="flex items-center justify-center gap-1 text-[10px] text-muted">
+                  <CloudRain size={10} aria-hidden /> Hujan
+                </dt>
+                <dd className="truncate text-xs font-semibold tabular-nums">
+                  {nowPoint.precipitationMm !== null
+                    ? nowPoint.precipitationMm > 0 ? `${nowPoint.precipitationMm} mm` : 'Tidak ada'
+                    : '—'}
+                </dd>
+              </div>
             </dl>
 
             {days.length > 1 && (
-              <ul className="grid grid-cols-2 gap-2 border-t border-line pt-2.5 sm:grid-cols-3">
+              <ul className="grid grid-cols-2 gap-2 border-t border-line pt-2.5">
                 {days.slice(1).map((day) => {
                   const wet = day.points.filter(isSignificantWeather).length;
                   const temps = day.points.map((p) => p.temperatureC).filter((v): v is number => v !== null);
                   return (
-                    <li key={day.date} className="text-[11px]">
-                      <p className="font-medium">{dayLabel(day.date)}</p>
-                      <p className="text-muted">
+                    <li key={day.date} className="min-w-0 text-[11px]">
+                      <p className="truncate font-medium">{dayLabel(day.date)}</p>
+                      <p className="truncate text-muted">
                         {temps.length > 0 ? `${Math.round(Math.min(...temps))}–${Math.round(Math.max(...temps))}°C` : '—'}
-                        {wet > 0 ? ` · ${wet} interval hujan` : ''}
+                        {wet > 0 ? ` · ${wet}× hujan` : ''}
                       </p>
                     </li>
                   );
@@ -159,10 +183,10 @@ export function WeatherDashboardCard() {
         {alerts.data && alerts.data.length > 0 && (
           <Link
             href="/cuaca/peringatan-dini"
-            className="flex items-start gap-2 rounded-md border border-[#C0392B]/40 bg-[#C0392B]/5 px-2.5 py-2 text-xs hover:bg-[#C0392B]/10"
+            className="flex min-w-0 items-start gap-2 rounded-md border border-[#C0392B]/40 bg-[#C0392B]/5 px-2.5 py-2 text-xs hover:bg-[#C0392B]/10"
           >
             <TriangleAlert size={13} aria-hidden className="mt-0.5 shrink-0 text-danger" />
-            <span>
+            <span className="min-w-0">
               <strong className="font-semibold">Peringatan dini cuaca</strong> untuk {area.district}: {alerts.data[0].title}
             </span>
           </Link>
@@ -205,7 +229,7 @@ export interface HotItem {
  * ekstrem ≤ 6 jam. Sumber yang gagal dimuat tidak ditampilkan sebagai
  * "aman" — barisnya diberi keterangan gagal.
  */
-export function HotEventsPanel({ now = Date.now() }: { now?: number }) {
+export function HotEventsPanel({ now = Date.now(), className = 'mt-4' }: { now?: number; className?: string }) {
   const eruptions = useVolcanoQuery<EruptionEvent[]>('/api/volcano/erupsi?size=20', {
     pollMs: 5 * 60_000,
     transform: (payload) => (payload as EruptionPayload).eruptions ?? [],
@@ -277,14 +301,14 @@ export function HotEventsPanel({ now = Date.now() }: { now?: number }) {
     // penting untuk diketahui sehingga diberi baris ringkas.
     if (!anyLoaded || failures.length === 0) return null;
     return (
-      <p className="mt-4 rounded-lg border border-line bg-surface px-4 py-2.5 text-xs text-muted">
+      <p className={`${className} rounded-lg border border-line bg-surface px-4 py-2.5 text-xs text-muted`}>
         Sebagian sumber belum dapat diperiksa ({failures.join(', ')}). Buka menu terkait untuk memastikan status terbaru.
       </p>
     );
   }
 
   return (
-    <Panel title="Perlu perhatian" className="mt-4 min-w-0">
+    <Panel title="Perlu perhatian" className={`${className} min-w-0`}>
       <ul className="divide-y divide-line">
         {items.map((item) => (
           <li key={`${item.kind}-${item.time}-${item.title}`} className="flex items-start gap-2.5 px-4 py-2.5 text-sm">
