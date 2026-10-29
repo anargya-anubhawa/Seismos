@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { ensureTsunamiFresh } from '@/lib/tsunami/monitor';
 import { getTsunamiFeed } from '@/lib/tsunami/service';
+import { publicErrorMessage } from '@/lib/public-error';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -25,7 +26,7 @@ export async function GET() {
       activeAlerts: [],
       alerts: [],
       sources: [],
-      message: `Status tsunami tidak dapat dipastikan: penyimpanan server gagal dibaca (${error instanceof Error ? error.message : 'kesalahan tidak dikenal'}). Jangan anggap situasi aman; ikuti kanal resmi BMKG.`,
+      message: publicErrorMessage(error, 'Status tsunami tidak dapat dipastikan: penyimpanan server gagal dibaca (kesalahan tidak dikenal). Jangan anggap situasi aman; ikuti kanal resmi BMKG.'),
     }, {
       status: 503,
       headers: { 'Cache-Control': 'no-store, max-age=0' },

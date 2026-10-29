@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { findSubscription, normalizeTopics } from '@/lib/volcano/push';
+import { publicErrorMessage } from '@/lib/public-error';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -23,7 +24,7 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     return NextResponse.json({
-      error: `Kategori notifikasi tidak dapat dibaca: ${error instanceof Error ? error.message : 'kesalahan tidak dikenal'}`,
+      error: publicErrorMessage(error, 'Kategori notifikasi tidak dapat dibaca: kesalahan tidak dikenal'),
     }, { status: 500 });
   }
 }

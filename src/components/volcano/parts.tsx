@@ -100,7 +100,6 @@ export function SourceImage({
   }
 
   return (
-    // eslint-disable-next-line @next/next/no-img-element
     <img
       src={src}
       alt={alt}
@@ -233,7 +232,6 @@ export function CameraCard({
             <span>Citra kamera sedang tidak tersedia.</span>
           </span>
         ) : (
-          /* eslint-disable-next-line @next/next/no-img-element */
           <img
             src={camera.imagePath}
             alt={`Citra kamera ${camera.station || camera.id} Gunung ${camera.volcanoName}`}
@@ -362,7 +360,6 @@ function LazyPhoto({ src, alt }: { src: string; alt: string }) {
     );
   }
   return (
-    // eslint-disable-next-line @next/next/no-img-element
     <img
       src={src}
       alt={alt}

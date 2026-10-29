@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import {
   isValidPushSubscription, normalizeTopics, removeSubscription, upsertSubscription,
 } from '@/lib/volcano/push';
+import { publicErrorMessage } from '@/lib/public-error';
+import { rateLimit } from '@/lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -15,6 +17,19 @@ function endpointFrom(value: unknown): string | null {
 
 /** Daftarkan langganan push beserta kategori gunung api yang dipilih. */
 export async function POST(request: Request) {
+  // Batasi percobaan dari satu klien: endpoint ini menulis ke penyimpanan
+  // langganan atau memicu kiriman push, jadi tidak boleh bisa dibanjiri.
+  const limited = rateLimit(request, { name: 'volcano-push-subscribe', limit: 30, windowMs: 600000 });
+  if (limited) return limited;
+
+  // Tolak body yang jelas lebih besar sebelum dibaca seluruhnya.
+  const declaredLength = Number(request.headers.get('content-length'));
+  if (Number.isFinite(declaredLength) && declaredLength > 4000) {
+    return NextResponse.json(
+      { error: 'Body permintaan terlalu besar' },
+      { status: 413, headers: { 'Cache-Control': 'no-store, max-age=0' } },
+    );
+  }
   let body: unknown;
   try { body = await request.json(); } catch {
     return NextResponse.json({ error: 'Body JSON tidak valid' }, { status: 400 });
@@ -36,13 +51,26 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     return NextResponse.json({
-      error: `Langganan push gagal disimpan (${error instanceof Error ? error.message : 'kesalahan tidak dikenal'}).`,
+      error: publicErrorMessage(error, 'Langganan push gagal disimpan (kesalahan tidak dikenal).'),
     }, { status: 500, headers: { 'Cache-Control': 'no-store, max-age=0' } });
   }
 }
 
 /** Hapus langganan (mis. ketika pengguna menonaktifkan notifikasi). */
 export async function DELETE(request: Request) {
+  // Batasi percobaan dari satu klien: endpoint ini menulis ke penyimpanan
+  // langganan atau memicu kiriman push, jadi tidak boleh bisa dibanjiri.
+  const limited = rateLimit(request, { name: 'volcano-push-subscribe', limit: 30, windowMs: 600000 });
+  if (limited) return limited;
+
+  // Tolak body yang jelas lebih besar sebelum dibaca seluruhnya.
+  const declaredLength = Number(request.headers.get('content-length'));
+  if (Number.isFinite(declaredLength) && declaredLength > 4000) {
+    return NextResponse.json(
+      { error: 'Body permintaan terlalu besar' },
+      { status: 413, headers: { 'Cache-Control': 'no-store, max-age=0' } },
+    );
+  }
   let body: unknown;
   try { body = await request.json(); } catch {
     return NextResponse.json({ error: 'Body JSON tidak valid' }, { status: 400 });
@@ -56,7 +84,7 @@ export async function DELETE(request: Request) {
     });
   } catch (error) {
     return NextResponse.json({
-      error: `Langganan push gagal dihapus (${error instanceof Error ? error.message : 'kesalahan tidak dikenal'}).`,
+      error: publicErrorMessage(error, 'Langganan push gagal dihapus (kesalahan tidak dikenal).'),
     }, { status: 500, headers: { 'Cache-Control': 'no-store, max-age=0' } });
   }
 }

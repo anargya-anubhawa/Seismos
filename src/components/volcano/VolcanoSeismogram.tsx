@@ -38,7 +38,6 @@ function LiveImage({
 
   return (
     // Gambar diproksi lewat /api/seismograms/[id]/image agar tidak diblokir iframe/CORS.
-    // eslint-disable-next-line @next/next/no-img-element
     <img
       src={src}
       alt={alt}

@@ -3,6 +3,7 @@ import { normalizeBmkgEvent } from '@/lib/validation';
 import { fetchJson, fetchText } from './client';
 import { parseFeltEventsXml, parseLiveEventsXml } from './xml';
 import type { Earthquake, EarthquakeResponse, SourceStatus, SourceTag } from '@/types/earthquake';
+import { publicErrorMessage } from '@/lib/public-error';
 
 const BASE = (process.env.BMKG_BASE_URL ?? 'https://data.bmkg.go.id/DataMKG/TEWS').replace(/\/$/, '');
 const CDN = (process.env.BMKG_CDN_URL ?? 'https://cdn.bmkg.go.id').replace(/\/$/, '');
@@ -81,7 +82,9 @@ async function loadSource(src: SourceDef) {
   } catch (e) {
     const status: SourceStatus = {
       id: src.id, label: src.label, url: src.url, fetchedAt: null, stale: false,
-      error: e instanceof Error ? e.message : 'Gagal', count: 0,
+      // Status per sumber ikut ditampilkan di UI, jadi pesan teknis runtime
+      // (mis. `fetch failed`) diganti kalimat umum seperti pada respons API.
+      error: publicErrorMessage(e, 'Sumber data tidak dapat dihubungi'), count: 0,
     };
     return { events: [] as Earthquake[], status };
   }

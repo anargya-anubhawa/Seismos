@@ -1,5 +1,6 @@
 import { fetchKrbFile } from '@/services/magma/volcano';
 import { fetchMagmaImage, isAllowedMagmaImage } from '@/services/magma/image';
+import { publicErrorMessage } from '@/lib/public-error';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -41,7 +42,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
     return new Response(body, { status: 200, headers });
   } catch (error) {
     return new Response(
-      error instanceof Error ? error.message : 'Berkas peta KRB tidak dapat diambil.',
+      publicErrorMessage(error, 'kesalahan tidak dikenal'),
       { status: 502, headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' } },
     );
   }

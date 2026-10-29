@@ -4,6 +4,7 @@ import {
 } from '@/services/magma/volcano';
 import { getStatuses } from '@/lib/volcano/service';
 import { POLL_SECONDS } from '@/lib/volcano/monitor';
+import { publicErrorMessage } from '@/lib/public-error';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -12,7 +13,7 @@ export const runtime = 'nodejs';
 /** Kesehatan sumber gunung api: status, VEN, VONA, CCTV, dan KRB. */
 export async function GET() {
   const [statuses, eruptions, vona, cameras, krb] = await Promise.all([
-    getStatuses().catch((error) => ({ error: error instanceof Error ? error.message : 'gagal', volcanoes: [] })),
+    getStatuses().catch((error) => ({ error: publicErrorMessage(error, 'kesalahan tidak dikenal'), volcanoes: [] })),
     getEruptions(5).catch(() => null),
     getVonaNotices(5).catch(() => null),
     getCameras().catch(() => null),

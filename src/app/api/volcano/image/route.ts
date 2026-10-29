@@ -1,4 +1,5 @@
 import { fetchMagmaImage, isAllowedMagmaImage } from '@/services/magma/image';
+import { publicErrorMessage } from '@/lib/public-error';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -32,7 +33,7 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     return new Response(
-      error instanceof Error ? error.message : 'Gambar MAGMA tidak dapat diambil.',
+      publicErrorMessage(error, 'kesalahan tidak dikenal'),
       {
         status: 502,
         headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' },

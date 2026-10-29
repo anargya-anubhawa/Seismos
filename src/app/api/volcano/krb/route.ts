@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getKrbMaps } from '@/services/magma/volcano';
+import { publicErrorMessage } from '@/lib/public-error';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -26,7 +27,7 @@ export async function GET() {
   } catch (error) {
     return NextResponse.json({
       maps: [],
-      error: `Daftar peta KRB MAGMA tidak dapat dimuat: ${error instanceof Error ? error.message : 'kesalahan tidak dikenal'}`,
+      error: publicErrorMessage(error, 'Daftar peta KRB MAGMA tidak dapat dimuat: kesalahan tidak dikenal'),
     }, { status: 502, headers: { 'Cache-Control': 'no-store, max-age=0' } });
   }
 }

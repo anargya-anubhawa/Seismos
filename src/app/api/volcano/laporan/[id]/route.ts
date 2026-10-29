@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getActivityReport, getDailyReports } from '@/services/magma/volcano';
+import { publicErrorMessage } from '@/lib/public-error';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -30,7 +31,7 @@ export async function GET(_request: Request, { params }: { params: { id: string 
       });
     } catch (error) {
       return NextResponse.json({
-        error: `Laporan harian tidak dapat dimuat: ${error instanceof Error ? error.message : 'kesalahan tidak dikenal'}`,
+        error: publicErrorMessage(error, 'Laporan harian tidak dapat dimuat: kesalahan tidak dikenal'),
       }, { status: 502 });
     }
   }
@@ -45,7 +46,7 @@ export async function GET(_request: Request, { params }: { params: { id: string 
     });
   } catch (error) {
     return NextResponse.json({
-      error: `Laporan aktivitas tidak dapat dimuat: ${error instanceof Error ? error.message : 'kesalahan tidak dikenal'}`,
+      error: publicErrorMessage(error, 'Laporan aktivitas tidak dapat dimuat: kesalahan tidak dikenal'),
     }, { status: 502, headers: { 'Cache-Control': 'no-store, max-age=0' } });
   }
 }

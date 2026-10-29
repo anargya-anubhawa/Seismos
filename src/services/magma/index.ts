@@ -1,6 +1,7 @@
 import { cached } from '@/lib/cache';
 import { fetchJson } from '@/services/bmkg/client';
 import type { SeismogramResponse, SeismogramStation, VolcanoOption } from '@/types/seismogram';
+import { publicErrorMessage } from '@/lib/public-error';
 
 const BASE = (process.env.MAGMA_BASE_URL ?? 'https://magma.esdm.go.id/_api').replace(/\/$/, '');
 const IMAGE_BASE = (process.env.MAGMA_IMAGE_BASE ?? 'https://vsi.esdm.go.id/data/api/public').replace(/\/$/, '');
@@ -106,7 +107,7 @@ export async function getSeismograms(): Promise<SeismogramResponse> {
     volcanoes = options.value;
     if (options.error) optionsError = options.error;
   } catch (e) {
-    optionsError = e instanceof Error ? e.message : 'Daftar gunung api gagal dimuat';
+    optionsError = publicErrorMessage(e, 'Daftar gunung api gagal dimuat');
     volcanoes = volcanoesFromStations(list.value);
   }
   if (volcanoes.length === 0) volcanoes = volcanoesFromStations(list.value);

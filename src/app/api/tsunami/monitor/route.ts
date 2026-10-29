@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { runTsunamiCheck } from '@/lib/tsunami/monitor';
+import { publicErrorMessage } from '@/lib/public-error';
+import { rateLimit } from '@/lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -32,7 +34,7 @@ async function run(request: Request) {
     });
   } catch (error) {
     return NextResponse.json({
-      error: `Pemeriksaan tsunami gagal (${error instanceof Error ? error.message : 'kesalahan tidak dikenal'}).`,
+      error: publicErrorMessage(error, 'Pemeriksaan tsunami gagal (kesalahan tidak dikenal).'),
     }, {
       status: 500,
       headers: { 'Cache-Control': 'no-store, max-age=0' },
@@ -45,5 +47,18 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  // Batasi percobaan dari satu klien: endpoint ini menulis ke penyimpanan
+  // langganan atau memicu kiriman push, jadi tidak boleh bisa dibanjiri.
+  const limited = rateLimit(request, { name: 'tsunami-monitor', limit: 20, windowMs: 300000 });
+  if (limited) return limited;
+
+  // Tolak body yang jelas lebih besar sebelum dibaca seluruhnya.
+  const declaredLength = Number(request.headers.get('content-length'));
+  if (Number.isFinite(declaredLength) && declaredLength > 8000) {
+    return NextResponse.json(
+      { error: 'Body permintaan terlalu besar' },
+      { status: 413, headers: { 'Cache-Control': 'no-store, max-age=0' } },
+    );
+  }
   return run(request);
 }

@@ -12,6 +12,7 @@ import type {
   SatelliteFrame, SatelliteProduct, WeatherAlert, WeatherAlertFeed, WeatherArea, WeatherForecast,
   WeatherSourceId,
 } from '@/types/weather';
+import { publicErrorMessage } from '@/lib/public-error';
 
 /**
  * Klien server data cuaca BMKG.
@@ -324,7 +325,7 @@ export async function getSatelliteFrame(id: string): Promise<SatelliteFrame | nu
       capturedAt: null,
       checkedAt,
       stale: false,
-      error: error instanceof Error ? error.message : 'Citra satelit tidak dapat diperiksa',
+      error: publicErrorMessage(error, 'Citra satelit tidak dapat diperiksa'),
     };
   }
 }

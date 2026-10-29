@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getForecastByCode, getForecastForPoint, searchWeatherAreas } from '@/services/bmkg/weather';
+import { publicErrorMessage } from '@/lib/public-error';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -28,7 +29,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ results, query }, { headers: noStore });
     } catch (error) {
       return NextResponse.json(
-        { results: [], error: `Daftar wilayah cuaca tidak dapat dibaca: ${error instanceof Error ? error.message : 'kesalahan tidak dikenal'}` },
+        { results: [], error: publicErrorMessage(error, 'Daftar wilayah cuaca tidak dapat dibaca: kesalahan tidak dikenal') },
         { status: 503, headers: noStore },
       );
     }
@@ -46,7 +47,7 @@ export async function GET(request: Request) {
       }, { headers: noStore });
     } catch (error) {
       return NextResponse.json(
-        { forecast: null, error: `Prakiraan cuaca BMKG tidak dapat dimuat: ${error instanceof Error ? error.message : 'kesalahan tidak dikenal'}` },
+        { forecast: null, error: publicErrorMessage(error, 'Prakiraan cuaca BMKG tidak dapat dimuat: kesalahan tidak dikenal') },
         { status: 502, headers: noStore },
       );
     }
@@ -79,7 +80,7 @@ export async function GET(request: Request) {
     }, { headers: noStore });
   } catch (error) {
     return NextResponse.json(
-      { forecast: null, error: `Prakiraan cuaca BMKG tidak dapat dimuat: ${error instanceof Error ? error.message : 'kesalahan tidak dikenal'}` },
+      { forecast: null, error: publicErrorMessage(error, 'Prakiraan cuaca BMKG tidak dapat dimuat: kesalahan tidak dikenal') },
       { status: 502, headers: noStore },
     );
   }

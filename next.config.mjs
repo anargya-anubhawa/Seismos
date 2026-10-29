@@ -3,6 +3,18 @@ import path from 'node:path';
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  images: {
+    /*
+      Nonaktifkan Optimizer Gambar Next.js.
+      Seismos tidak memakai optimasi gambar Next: satu-satunya pemakaian
+      `next/image` (ikon cuaca BMKG) sudah memasang `unoptimized`, dan seluruh
+      gambar gunung api/gempa melewati proxy sendiri yang sudah dibatasi host.
+      Dengan optimizer mati, endpoint `/_next/image` tidak lagi dipakai, sehingga
+      tidak ada jalur pemrosesan gambar Sharp yang bisa dieksploitasi. Ini juga
+      menghindari pemuatan `sharp` yang tidak pernah terpakai.
+    */
+    unoptimized: true,
+  },
   experimental: {
     // Next.js 14: instrumentation.ts dipakai untuk memulai pemantau tsunami.
     instrumentationHook: true,
@@ -27,6 +39,35 @@ const nextConfig = {
     return config;
   },
   async headers() {
+    /*
+      CSP memakai nonce? Tidak: skrip tema di `layout.tsx` adalah konstanta statis
+      dan Next.js menyisipkan skrip bootstrap-nya sendiri. Karena itu dipakai
+      `'unsafe-inline'` untuk script — ditambah `strict-dynamic` tidak dipakai di
+      sini karena akan memblokir skrip inline bawaan Next 14.
+
+      Catatan: CSP ini tidak memblokir XSS yang berasal dari data pihak pertama
+      (server tetap satu-satunya sumber HTML), tetapi menutup jalur injeksi
+      eksternal: skrip hanya dari origin sendiri, tidak ada `eval`, dan frame
+      hanya boleh dari YouTube (halaman siaran langsung).
+    */
+    const csp = [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline'",
+      "style-src 'self' 'unsafe-inline'",
+      // Tile peta Leaflet: OpenStreetMap (jalan) dan ArcGIS (citra).
+      "img-src 'self' data: blob: https://i.ytimg.com https://tile.openstreetmap.org https://server.arcgisonline.com",
+      "font-src 'self' data:",
+      "connect-src 'self'",
+      "frame-src https://www.youtube-nocookie.com https://www.youtube.com",
+      "media-src 'self'",
+      "worker-src 'self'",
+      "manifest-src 'self'",
+      "object-src 'none'",
+      "base-uri 'self'",
+      "form-action 'self'",
+      "frame-ancestors 'self'",
+    ].join('; ');
+
     return [
       {
         source: '/:path*',
@@ -34,6 +75,13 @@ const nextConfig = {
           { key: 'X-Content-Type-Options', value: 'nosniff' },
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
           { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+          { key: 'Content-Security-Policy', value: csp },
+          {
+            key: 'Strict-Transport-Security',
+            value: 'max-age=31536000; includeSubDomains',
+          },
+          { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
+          { key: 'Permissions-Policy', value: 'geolocation=(self), camera=(), microphone=(), payment=()' },
         ],
       },
     ];

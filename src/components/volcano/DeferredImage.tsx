@@ -84,7 +84,6 @@ export function DeferredImage({
                   Memuat gambar besar…
                 </div>
               )}
-              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 key={src}
                 src={src}

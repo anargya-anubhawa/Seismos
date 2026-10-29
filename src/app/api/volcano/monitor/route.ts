@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { runVolcanoCheck, POLL_SECONDS } from '@/lib/volcano/monitor';
 import { loadState } from '@/lib/volcano/store';
+import { publicErrorMessage } from '@/lib/public-error';
+import { rateLimit } from '@/lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -42,13 +44,26 @@ export async function GET() {
     return NextResponse.json(await status(), { headers: { 'Cache-Control': 'no-store, max-age=0' } });
   } catch (error) {
     return NextResponse.json({
-      error: `Status pemantauan gunung api tidak dapat dibaca: ${error instanceof Error ? error.message : 'kesalahan tidak dikenal'}`,
+      error: publicErrorMessage(error, 'Status pemantauan gunung api tidak dapat dibaca: kesalahan tidak dikenal'),
     }, { status: 500 });
   }
 }
 
 /** Jalankan pemeriksaan sumber resmi sekarang (untuk cron / admin). */
 export async function POST(request: Request) {
+  // Batasi percobaan dari satu klien: endpoint ini menulis ke penyimpanan
+  // langganan atau memicu kiriman push, jadi tidak boleh bisa dibanjiri.
+  const limited = rateLimit(request, { name: 'volcano-monitor', limit: 20, windowMs: 300000 });
+  if (limited) return limited;
+
+  // Tolak body yang jelas lebih besar sebelum dibaca seluruhnya.
+  const declaredLength = Number(request.headers.get('content-length'));
+  if (Number.isFinite(declaredLength) && declaredLength > 8000) {
+    return NextResponse.json(
+      { error: 'Body permintaan terlalu besar' },
+      { status: 413, headers: { 'Cache-Control': 'no-store, max-age=0' } },
+    );
+  }
   if (!authorized(request)) return NextResponse.json({ error: 'Tidak diizinkan' }, { status: 401 });
   const force = new URL(request.url).searchParams.get('force') === '1';
   try {
@@ -58,7 +73,7 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     return NextResponse.json({
-      error: `Pemeriksaan gunung api gagal: ${error instanceof Error ? error.message : 'kesalahan tidak dikenal'}`,
+      error: publicErrorMessage(error, 'Pemeriksaan gunung api gagal: kesalahan tidak dikenal'),
     }, { status: 500 });
   }
 }

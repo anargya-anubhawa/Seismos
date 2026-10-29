@@ -166,7 +166,6 @@ export default function EventPage({ params }: { params: { id: string } }) {
           </Panel>
           {q.shakemapFile && (
             <Panel title="Shakemap resmi BMKG">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={`${BMKG_SHAKEMAP_BASE}${encodeURIComponent(q.shakemapFile)}`} alt={`Peta guncangan (shakemap) BMKG untuk gempa M ${q.magnitude.toFixed(1)} di ${q.region}`} className="w-full" loading="lazy" />
               <p className="px-4 py-2 text-xs text-muted">Gambar dimuat langsung dari server BMKG. Jika tidak tampil, berkas mungkin belum tersedia.</p>
             </Panel>

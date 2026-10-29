@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getWeatherAlerts } from '@/services/bmkg/weather';
+import { publicErrorMessage } from '@/lib/public-error';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -33,7 +34,7 @@ export async function GET(request: Request) {
   } catch (error) {
     return NextResponse.json({
       alerts: [],
-      error: `Peringatan dini cuaca BMKG tidak dapat dimuat: ${error instanceof Error ? error.message : 'kesalahan tidak dikenal'}`,
+      error: publicErrorMessage(error, 'Peringatan dini cuaca BMKG tidak dapat dimuat: kesalahan tidak dikenal'),
     }, { status: 502, headers: noStore });
   }
 }

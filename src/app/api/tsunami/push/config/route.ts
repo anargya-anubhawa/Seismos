@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getPushConfig } from '@/lib/tsunami/push';
+import { publicErrorMessage } from '@/lib/public-error';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -13,7 +14,7 @@ export async function GET() {
     });
   } catch (error) {
     return NextResponse.json({
-      error: `Konfigurasi push tsunami tidak tersedia (${error instanceof Error ? error.message : 'kesalahan tidak dikenal'}).`,
+      error: publicErrorMessage(error, 'Konfigurasi push tsunami tidak tersedia (kesalahan tidak dikenal).'),
     }, {
       status: 503,
       headers: { 'Cache-Control': 'no-store, max-age=0' },

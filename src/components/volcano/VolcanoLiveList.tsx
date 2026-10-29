@@ -93,7 +93,6 @@ function LiveCard({ stream }: { stream: VolcanoLiveStream }) {
     >
       <span className="relative block aspect-video w-full overflow-hidden bg-bg">
         {/* Thumbnail YouTube: gambar biasa, jadi tidak ada skrip pihak ketiga di sini. */}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={liveStreamThumbnail(stream.videoId, false)}
           alt={`Thumbnail siaran ${stream.title}`}

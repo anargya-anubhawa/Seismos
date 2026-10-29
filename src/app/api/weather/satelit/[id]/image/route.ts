@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { fetchSatelliteImage, findSatelliteProduct } from '@/services/bmkg/weather';
+import { publicErrorMessage } from '@/lib/public-error';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -35,7 +36,7 @@ export async function GET(_request: Request, { params }: { params: { id: string 
     });
   } catch (error) {
     return new Response(
-      error instanceof Error ? error.message : 'Citra satelit BMKG tidak dapat diambil.',
+      publicErrorMessage(error, 'kesalahan tidak dikenal'),
       { status: 502, headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' } },
     );
   }

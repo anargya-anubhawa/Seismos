@@ -1,3 +1,5 @@
+import { publicErrorMessage } from '@/lib/public-error';
+
 interface Entry<T> {
   value: T;
   at: number;
@@ -31,7 +33,9 @@ export async function cached<T>(
     store.set(key, entry);
     return { value, at: entry.at, stale: false, error: null };
   } catch (e) {
-    const error = e instanceof Error ? e.message : 'Kesalahan tidak dikenal';
+    // `error` di sini dikirim ke klien sebagai `SourceStatus.error`, jadi pesan
+    // teknis runtime disaring seperti pada respons API lain.
+    const error = publicErrorMessage(e, 'Kesalahan tidak dikenal');
     if (hit) return { value: hit.value, at: hit.at, stale: true, error };
     throw e;
   }
