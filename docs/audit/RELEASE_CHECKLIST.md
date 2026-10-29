@@ -6,27 +6,38 @@ ditandai selesai tanpa bukti.
 
 ---
 
-## 1. Sudah diverifikasi (berbukti di sesi audit)
+## 1. Sudah diverifikasi (berbukti, termasuk verifikasi akhir)
 
-| # | Butir | Hasil | Bukti |
-|---|---|---|---|
-| 1.1 | `npm run lint` bersih | ✅ | `✔ No ESLint warnings or errors` |
-| 1.2 | `npm run typecheck` bersih | ✅ | `tsc --noEmit` tanpa keluaran |
-| 1.3 | `npm test` lulus | ✅ | 110/110, 0 gagal |
-| 1.4 | `npm run build` berhasil | ✅ | `✓ Compiled successfully`, exit 0, 74 rute |
-| 1.5 | Lockfile konsisten | ✅ | `npm ls --depth=0` tanpa `UNMET`/`extraneous` |
-| 1.6 | 22 rute utama merespons `200` | ✅ | `curl` ke `next start` |
-| 1.7 | Header keamanan terkirim | ✅ | CSP, HSTS, COOP, Permissions-Policy terlihat di `curl -I` |
-| 1.8 | `/_next/image` tidak aktif | ✅ | `404` (optimizer mati) |
-| 1.9 | Pesan galat internal tidak bocor | ✅ | `grep -c "fetch failed"` → 0 pada respons galat |
-| 1.10 | API tetap JSON saat sumber mati | ✅ | `502` + JSON lengkap, bukan `500` kosong |
-| 1.11 | Pembatas laju bekerja | ✅ | `429` + `Retry-After` pada permintaan ke-6 |
-| 1.12 | Batas ukuran body bekerja | ✅ | `413` untuk body 5.011 B pada endpoint push |
-| 1.13 | Integritas data gempa | ✅ | 204 kejadian, terurut, unik, koordinat valid |
-| 1.14 | Statistik rekonsiliasi | ✅ | 42+24+3+0 = 69 = `total` |
-| 1.15 | Tidak ada penonaktifan ESLint | ✅ | `grep -rn "eslint-disable" src/` → 0 |
-| 1.16 | Tidak ada artefak tertinggal | ✅ | `page.tsx.bak` dihapus; tidak ada `.bak/.orig/.rej` lain |
-| 1.17 | Semua variabel env terdokumentasi | ✅ | 0 variabel di `src/` tanpa entri di `.env.example` |
+Semua butir di bawah dijalankan **ulang** pada verifikasi akhir (build dari `.next` kosong,
+server `next start` baru). Label: **PASS** = terbukti di sesi ini.
+
+| # | Butir | Hasil | Label | Bukti |
+|---|---|---|---|---|
+| 1.1 | `npm run lint` bersih | ✅ | **PASS** | `✔ No ESLint warnings or errors` |
+| 1.2 | `npm run typecheck` bersih | ✅ | **PASS** | `tsc --noEmit` tanpa keluaran |
+| 1.3 | `npm test` lulus | ✅ | **PASS** | 110/110, 0 gagal |
+| 1.4 | `npm run build` berhasil | ✅ | **PASS** | `✓ Compiled successfully`, exit 0, 74 rute (dari `.next` kosong) |
+| 1.5 | Lockfile konsisten | ✅ | **PASS** | `npm ls --depth=0` tanpa `UNMET`/`extraneous` |
+| 1.6 | 22 rute utama merespons `200` | ✅ | **PASS** | `curl` ke `next start` |
+| 1.7 | Header keamanan terkirim | ✅ | **PASS** | 7 header: CSP, HSTS, COOP, Permissions-Policy, X-Frame-Options, X-Content-Type-Options, Referrer-Policy |
+| 1.8 | `/_next/image` tidak aktif | ✅ | **PASS** | `404` dengan **dan** tanpa parameter `url/w/q` |
+| 1.9 | Pesan galat internal tidak bocor | ✅ | **PASS** | `grep -c "fetch failed"` → 0 pada respons galat |
+| 1.10 | API tetap JSON saat sumber mati | ✅ | **PASS** | `/api/volcano/status` → `502` + `application/json` body lengkap; `/api/earthquakes` → `200` dari sumber sehat |
+| 1.11 | Pembatas laju bekerja | ✅ | **PASS** | `429` + `Retry-After` (limit 20 → `429` di req 18–21 karena trafik uji sebelumnya; push/test limit 5 → `429` di req ke-6) |
+| 1.12 | Batas ukuran body bekerja | ✅ | **PASS** | `413 {"error":"Body permintaan terlalu besar"}` untuk body 5.001 B; body sah tetap sampai ke validasi (`400`) |
+| 1.13 | Integritas data gempa | ✅ | **PASS** | 204 kejadian, terurut desc, `id` unik, 5 sumber aktif (terbaru 1, m5 15, dirasakan 15, felt30 30, live 165) |
+| 1.14 | Statistik rekonsiliasi | ✅ | **PASS** | 42+24+3+0 = 69 = `total` |
+| 1.15 | Tidak ada penonaktifan ESLint / TypeScript | ✅ | **PASS** | `eslint-disable` → 0; `@ts-ignore`/`@ts-expect-error`/`@ts-nocheck` → 0; `as any` → 0; tanpa `ignoreBuildErrors`/`ignoreDuringBuilds` |
+| 1.16 | Tidak ada artefak tertinggal | ✅ | **PASS** | `page.tsx.bak` dihapus; tidak ada `.bak/.orig/.rej` lain |
+| 1.17 | Semua variabel env terdokumentasi | ✅ | **PASS** | 0 variabel di `src/` tanpa entri di `.env.example` |
+| 1.18 | API pemantauan gunung api sehat | ✅ | **PASS** | `/api/volcano/{status,overview,vona,erupsi,gallery,cameras,laporan,krb,health}` → `200`, `ok:true` |
+| 1.19 | API cuaca & tsunami sehat | ✅ | **PASS** | `/api/weather/{satelit,peringatan}` → `200`; `/api/tsunami` → `200` |
+| 1.20 | Konfigurasi push tanpa env VAPID | ✅ | **PASS dengan catatan** | `/api/volcano/push/config` → `200`, kunci **digenerate otomatis** dan disimpan di `.data/` (bukan `503` seperti yang sempat ditulis di draf — draf itu keliru, lihat §15f) |
+| 1.21 | Kontrol akses monitor menegakkan rahasia | ✅ | **PASS dengan prasyarat** | secret diset: tanpa auth `401`, salah `401`, benar `200`. **Wajib diset di produksi** (§3.1) |
+| 1.22 | Penanganan data basi di UI | ✅ | **PASS** (kode) | `StaleDataNotice` di 5 halaman data; flag `stale` di `VolcanoOverview` & `VolcanoSeismogram` |
+| 1.23 | Izin notifikasi ditolak ditangani | ✅ | **PASS** (kode) | `useTsunamiPush.ts:150-156` memberi pesan Indonesia yang dapat ditindaklanjuti |
+| 1.24 | Langganan mati dibersihkan | ✅ | **PASS** (kode) | `push.ts` (volcano & tsunami) memangkas endpoint pada `404`/`410` |
+| 1.25 | Tidak ada rahasia ter-commit | ✅ | **PASS** | `git grep` pola kunci → kosong; `.env`/`.data/` tidak terlacak dan ada di `.gitignore` |
 
 ---
 
@@ -35,24 +46,24 @@ ditandai selesai tanpa bukti.
 Butir-butir ini **tidak dapat dijalankan** di lingkungan audit (tidak ada peramban, perangkat,
 maupun kunci VAPID). Jangan dianggap lulus.
 
-| # | Butir | Cara memverifikasi | Kriteria lulus |
-|---|---|---|---|
-| 2.1 | Tidak ada pelanggaran CSP | Buka setiap rute, cek tab Console | Nol pelanggaran CSP, termasuk `/map`, `/gunung-berapi/peta`, `/gunung-berapi/live-youtube/<id>` |
-| 2.2 | Peta Leaflet memuat tile | Buka `/map` dan `/gunung-berapi/peta` | Tile OpenStreetMap & ArcGIS tampil, tanpa blokir CSP |
-| 2.3 | Iframe YouTube tampil | Buka satu halaman siaran langsung | Pemutar muncul, `youtube-nocookie.com` tidak diblokir |
-| 2.4 | Responsif 360/768/1440 px | DevTools pada semua rute | Tidak ada gulir horizontal, tidak ada elemen terpotong |
-| 2.5 | Tangkapan layar setiap rute | Simpan sebagai bukti rilis | Visual sesuai harapan, dark & light |
-| 2.6 | Navigasi papan tunjuk | Tab melalui seluruh halaman | Fokus terlihat, urutan masuk akal, semua kontrol terjangkau |
-| 2.7 | Mode gerak berkurang | Aktifkan `prefers-reduced-motion` | Animasi berhenti, konten tetap terbaca |
-| 2.8 | Status tidak hanya warna | Periksa badge level gunung api | Selalu ada teks "Level I Normal … IV Awas" |
-| 2.9 | Lighthouse | Lighthouse (mode mobile) | Catat skor; tanpa target keras di rilis pertama |
-| 2.10 | Push notifikasi nyata | Setel VAPID di staging, daftar perangkat, kirim tes | Notifikasi diterima saat aplikasi di latar belakang |
-| 2.11 | Izin notifikasi ditolak | Blokir izin di peramban | Pesan jelas, tidak ada galat tak tertangani |
-| 2.12 | Offline | Matikan jaringan setelah satu kunjungan | Shell tampil; data API tidak menampilkan angka basi sebagai terkini |
-| 2.13 | Geolokasi ditolak | Tolak izin lokasi | Pesan jelas, aplikasi tetap berfungsi |
-| 2.14 | Pembaruan service worker | Deploy versi baru, muat ulang | Versi baru aktif; cache lama dibersihkan |
-| 2.15 | Pasang PWA di Android | "Add to Home Screen" | Ikon, nama, dan mode mandiri benar |
-| 2.16 | Peramban lain | Chrome, Firefox, Safari (iOS) | Tidak ada galat konsol yang menghambat |
+| # | Butir | Label | Cara memverifikasi | Kriteria lulus |
+|---|---|---|---|---|
+| 2.1 | Tidak ada pelanggaran CSP | **BLOCKED** | Buka setiap rute, cek tab Console | Nol pelanggaran CSP, termasuk `/map`, `/gunung-berapi/peta`, `/gunung-berapi/live-youtube/<id>` |
+| 2.2 | Peta Leaflet memuat tile | **BLOCKED** | Buka `/map` dan `/gunung-berapi/peta` | Tile OpenStreetMap & ArcGIS tampil, tanpa blokir CSP |
+| 2.3 | Iframe YouTube tampil | **BLOCKED** | Buka satu halaman siaran langsung | Pemutar muncul, `youtube-nocookie.com` tidak diblokir |
+| 2.4 | Responsif 360/768/1440 px | **BLOCKED** | DevTools pada semua rute | Tidak ada gulir horizontal, tidak ada elemen terpotong |
+| 2.5 | Tangkapan layar setiap rute | **BLOCKED** | Simpan sebagai bukti rilis | Visual sesuai harapan, dark & light |
+| 2.6 | Navigasi papan tunjuk | **BLOCKED** | Tab melalui seluruh halaman | Fokus terlihat, urutan masuk akal, semua kontrol terjangkau |
+| 2.7 | Mode gerak berkurang | **BLOCKED** | Aktifkan `prefers-reduced-motion` | Animasi berhenti, konten tetap terbaca |
+| 2.8 | Status tidak hanya warna | **BLOCKED** | Periksa badge level gunung api | Selalu ada teks "Level I Normal … IV Awas" |
+| 2.9 | Lighthouse | **BLOCKED** | Lighthouse (mode mobile) | Catat skor; tanpa target keras di rilis pertama |
+| 2.10 | Push notifikasi nyata | **BLOCKED** | Setel VAPID di staging, daftar perangkat, kirim tes | Notifikasi diterima saat aplikasi di latar belakang |
+| 2.11 | Izin notifikasi ditolak | **BLOCKED** | Blokir izin di peramban | Pesan jelas, tidak ada galat tak tertangani |
+| 2.12 | Offline | **BLOCKED** | Matikan jaringan setelah satu kunjungan | Shell tampil; data API tidak menampilkan angka basi sebagai terkini |
+| 2.13 | Geolokasi ditolak | **BLOCKED** | Tolak izin lokasi | Pesan jelas, aplikasi tetap berfungsi |
+| 2.14 | Pembaruan service worker | **BLOCKED** | Deploy versi baru, muat ulang | Versi baru aktif; cache lama dibersihkan |
+| 2.15 | Pasang PWA di Android | **BLOCKED** | "Add to Home Screen" | Ikon, nama, dan mode mandiri benar |
+| 2.16 | Peramban lain | **BLOCKED** | Chrome, Firefox, Safari (iOS) | Tidak ada galat konsol yang menghambat |
 
 ---
 
@@ -63,7 +74,7 @@ maupun kunci VAPID). Jangan dianggap lulus.
 | Variabel | Nilai | Mengapa wajib |
 |---|---|---|
 | `VAPID_SUBJECT` | `https://…` atau `mailto:…` | Wajib untuk Web Push yang sah |
-| `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | pasangan kunci | Tanpa ini notifikasi mati (`/push/config` → 503) |
+| `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | pasangan kunci (dari `web-push generate-vapid-keys`) | **Sangat disarankan.** Tanpa env, server **menggenerate & menyimpan** kunci di `.data/` — push tetap berfungsi, tetapi kunci hilang bila volume tidak persisten dan tidak dapat dipulihkan. Kunci yang panjangnya masuk akal tetapi **tidak sah secara kriptografis** akan diterima tanpa peringatan (`/push/config` tetap `200`), dan kegagalan baru muncul saat kirim. |
 | `VOLCANO_MONITOR_SECRET` | rahasia acak panjang | **Tanpa ini `POST /api/volcano/monitor` TERBUKA** |
 | `TSUNAMI_MONITOR_SECRET` | rahasia acak panjang | idem untuk tsunami |
 | `VOLCANO_DATA_DIR` / `TSUNAMI_DATA_DIR` | volume persisten | Tanpa volume, langganan & dedupe hilang saat container dibuat ulang |
@@ -146,9 +157,11 @@ bila dijalankan manual. Ini risiko proses yang nyata — tercatat sebagai OI-05.
 
 ## 6. Kesimpulan daftar periksa
 
-- **Dapat diverifikasi dan lulus:** seluruh butir bagian 1 (17 butir).
-- **Belum terverifikasi:** seluruh butir bagian 2 (16 butir) — butuh staging, peramban,
-  perangkat, dan kunci VAPID.
+- **PASS — dapat diverifikasi dan lulus:** seluruh butir bagian 1 (**25 butir**, diperluas dari
+  17 butir setelah verifikasi akhir menambahkan bukti API pemantauan, degradasi push, kontrol
+  akses monitor, dan penanganan UI untuk data basi/izin/langganan mati).
+- **BLOCKED — belum terverifikasi:** seluruh butir bagian 2 (**16 butir**) — butuh staging,
+  peramban, perangkat, dan kunci VAPID. Ini **bukan** lulus.
 - **Prasyarat produksi:** bagian 3, terutama dua rahasia monitor dan volume persisten.
 
 Rilis **tidak** boleh dinyatakan selesai sebelum bagian 2 dijalankan di staging. Bagian 1

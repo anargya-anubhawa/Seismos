@@ -11,16 +11,16 @@ Lighthouse tidak dapat dijalankan di lingkungan ini.
 
 ## 1. Apa yang diukur, dan apa yang tidak
 
-| Metrik | Status |
-|---|---|
-| Ukuran bundel per rute (First Load JS) | **Diukur** — keluaran `next build` |
-| Ukuran total JavaScript klien (mentah & gzip) | **Diukur** — `du`, `gzip -9` |
-| Pemisahan kode (recharts/leaflet tidak di beranda) | **Diukur** — analisis aset yang dimuat |
-| Jumlah rute / kompilasi | **Diukur** — 74 rute |
-| Core Web Vitals lapangan (LCP, INP, CLS) | **Tidak diukur** — butuh peramban |
-| Skor Lighthouse | **Tidak diukur** — butuh Chrome |
-| Kinerja di Android kelas bawah | **Tidak diukur** — butuh perangkat |
-| Beban CPU/memori server saat beban | **Tidak diukur** — butuh alat beban |
+| Metrik | Status | Label |
+|---|---|---|
+| Ukuran bundel per rute (First Load JS) | **Diukur** — keluaran `next build` | **PASS** |
+| Ukuran total JavaScript klien (mentah & gzip) | **Diukur** — `du`, `gzip -9` | **PASS** |
+| Pemisahan kode (recharts/leaflet tidak di beranda) | **Diukur** — analisis aset yang dimuat | **PASS** |
+| Jumlah rute / kompilasi | **Diukur** — 74 rute | **PASS** |
+| Core Web Vitals lapangan (LCP, INP, CLS) | **Tidak diukur** — butuh peramban | **BLOCKED** |
+| Skor Lighthouse | **Tidak diukur** — butuh Chrome | **BLOCKED** |
+| Kinerja di Android kelas bawah | **Tidak diukur** — butuh perangkat | **BLOCKED** |
+| Beban CPU/memori server saat beban | **Tidak diukur** — butuh alat beban | **NOT RUN** |
 
 Angka di bawah **bukan** hasil Lighthouse. Jangan dibaca sebagai skor kinerja lapangan.
 
@@ -167,6 +167,9 @@ Angka "perkiraan dampak" di atas adalah **estimasi**, bukan hasil pengukuran.
 ---
 
 ## 6. Kesimpulan performa
+
+**Label: PASS untuk semua metrik yang dapat diukur di lingkungan ini; BLOCKED untuk metrik
+yang butuh peramban/perangkat.**
 
 Secara terukur, tidak ditemukan masalah performa yang menghambat rilis dalam lingkup yang
 dapat diuji:

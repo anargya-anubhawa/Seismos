@@ -21,7 +21,7 @@ Skala usaha: **S** (jam), **M** (1–2 hari), **L** (3–5 hari), **XL** (>1 min
 
 | ID | Nama | Usaha | Risiko | Sebelum rilis? | Rekomendasi |
 |---|---|---|---|---|---|
-| OI-01 | Naik ke Next.js 16 (menutup 4 advisory sisa) | XL | Tinggi | Tidak | **Tunda** ke rilis berikutnya |
+| OI-01 | Naik ke Next.js 16 (menutup 25 advisory sisa) | XL | Tinggi | Tidak | **Tunda** ke rilis berikutnya |
 | OI-02 | Allowlist host langganan push | S | Rendah | Tidak | **Setujui** — murah, menutup F-10 |
 | OI-03 | Indikator kesegaran & atribusi data | S | Rendah | Tidak | **Setujui** |
 | OI-04 | Halaman status kesehatan sumber | S | Rendah | Tidak | **Setujui** |
@@ -33,14 +33,16 @@ Skala usaha: **S** (jam), **M** (1–2 hari), **L** (3–5 hari), **XL** (>1 min
 | OI-10 | Pemberitahuan pembaruan PWA | M | Sedang | Tidak | **Tunda** |
 | OI-11 | Pemantauan galat yang menghormati privasi | M | Sedang | Tidak | **Tunda** |
 | OI-12 | Ukuran citra proxy MAGMA | M | Sedang | Tidak | **Tolak** (lihat alasan) |
+| OI-13 | Validasi kriptografis kunci VAPID (65/32 byte + uji asap) | S | Rendah | Tidak | **Setujui** — menutup F-14 |
 
 ---
 
 ## OI-01 — Naik ke Next.js 16
 
-**Masalah yang diselesaikan.** Empat advisory `next` yang tersisa (`GHSA-2xp9-vwfh-vxw4`,
-`GHSA-2464-fhr4-w9xw`, `GHSA-p293-qw3h-jr36`, `GHSA-p3m5-59mp-jv5r`) hanya tertambal di 15.5.x/16.x.
-Saat ini keempatnya tidak dapat dijangkau (optimizer mati, server Linux, tanpa Server Actions),
+**Masalah yang diselesaikan.** 25 advisory `next` yang rentangnya mencakup `14.2.35` (3 kritis,
+9 tinggi, 11 sedang, 2 rendah; termasuk `GHSA-2xp9-vwfh-vxw4`, `GHSA-2464-fhr4-w9xw`,
+`GHSA-p293-qw3h-jr36`, `GHSA-p3m5-59mp-jv5r`) hanya tertambal di 15.5.x/16.x.
+Saat ini kondisi pemicunya tidak ada di kode (optimizer mati, server Linux, tanpa Server Actions),
 tetapi advisory tetap muncul di setiap `npm audit` dan menutupi advisory baru yang mungkin
 lebih penting.
 
@@ -145,7 +147,7 @@ menjalankan `tsc` berulang kali; tanpa CI, kesalahan seperti itu mudah masuk ke 
 **Manfaat pengguna.** Mencegah rilis yang tidak dapat di-build atau gagal tipe.
 
 **Implementasi.** `.github/workflows/ci.yml`: Node 24, `npm ci`, lalu empat perintah wajib.
-Tambahkan `npm audit --omit=dev` sebagai laporan (bukan penggagal, karena 4 advisory sisa
+Tambahkan `npm audit --omit=dev` sebagai laporan (bukan penggagal, karena 25 advisory sisa
 tidak dapat dijangkau). Jalankan pada `push` dan `pull_request`.
 
 **Usaha.** S. **Risiko.** Sangat rendah. **Biaya.** Menit GitHub Actions gratis untuk
@@ -313,3 +315,27 @@ OI-12 (Sharp) ──► bertentangan dengan F-01; jangan diambil sekarang
 ```
 
 **Prioritas bila hanya boleh memilih tiga:** OI-05, OI-09, OI-02.
+
+---
+
+## OI-13 — Validasi kriptografis kunci VAPID
+
+**Masalah yang diselesaikan.** `envKeys()` (`src/lib/volcano/push.ts:39-47`) hanya memeriksa
+*panjang* kunci. Kunci yang panjangnya wajar tetapi tidak sah secara kriptografis diterima,
+sehingga `/api/volcano/push/config` membalas `200` dengan kunci yang tidak akan pernah bisa
+memvalidasi langganan. Kerusakan baru terlihat saat kirim (promise rejection, tertangkap).
+Rincian bukti di [FINDINGS.md F-14](./FINDINGS.md).
+
+**Manfaat pengguna.** Operator yang salah menempel kunci mendapat peringatan jelas, bukan
+notifikasi yang diam-diam tidak pernah sampai.
+
+**Implementasi.** Setelah decode base64url, pastikan kunci publik 65 byte dan privat 32 byte;
+bila tidak, catat galat dan (a) jangan gunakan kunci env, atau (b) laporkan `enabled:false`
+dengan pesan yang dapat ditindaklanjuti di `/api/volcano/push/config`. Opsional: uji asap
+`webpush.generateRequestDetails` saat startup dan tampilkan hasilnya di `/api/volcano/health`.
+
+**Usaha.** S. **Risiko.** Rendah — hanya menolak konfigurasi yang memang tidak akan berfungsi.
+**Bergantung pada:** tidak ada.
+
+**Membutuhkan persetujuan Anda.** Balas `APPROVE OI-13` untuk mengerjakannya. Tanpa balasan
+itu, kode tidak diubah.

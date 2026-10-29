@@ -4,9 +4,29 @@ Audit defensif atas arsitektur yang **benar-benar ada** di repositori. Setiap pe
 disertai berkas dan perintah pemeriksa. Tidak ada klaim "aman" yang berdiri hanya karena
 build lolos.
 
-- Basis kode: `main` @ `8ee6d84`, audit pada sesi ini.
+- Basis kode: `main` @ `8ee6d84`, perbaikan di `ea4314a`, diverifikasi ulang pada verifikasi akhir.
 - Lingkup: Next.js 14 App Router (satu paket), tanpa database eksternal, tanpa layanan
   autentikasi pengguna.
+
+Kosakata label sama dengan [FINDINGS.md](./FINDINGS.md): **PASS** (terbukti), **FAIL**
+(rusak/terbuka), **BLOCKED** (tidak dapat diuji di lingkungan ini), **NOT RUN** (sengaja
+tidak dijalankan).
+
+### Hasil ringkas per area
+
+| Area | Label | Bukti |
+|---|---|---|
+| SSRF proxy gambar (allowlist host) | **PASS** | `src/services/magma/image.ts`, `src/services/bmkg/weather.ts` — host divalidasi |
+| XSS / injeksi HTML | **PASS** | 1 `dangerouslySetInnerHTML` (skrip tema statis); tidak ada input pengguna |
+| Kebocoran pesan galat | **PASS** | 0 `error.message` mentah di `src/app/api`; uji sumber rusak → `fetch failed` = 0 |
+| Header keamanan & CSP | **PASS** | 7 header terkirim; optimizer mati (`/_next/image` → 404) |
+| Pembatas laju & batas body | **PASS** | `429` pada limit, `413` pada body > batas, teruji |
+| Kontrol akses monitor | **PASS dengan prasyarat** | `401/401/200` saat secret diset; **wajib** diset di produksi |
+| Kerentanan dependensi | **PASS dengan risiko diterima** | 25 advisory pada `next@14.2.35`, pemicu tidak ada di kode (§7) |
+| Privasi & minimalisasi data | **PASS** | tanpa akun, tanpa telemetri pihak ketiga |
+| Uji penetrasi menyeluruh | **NOT RUN** | tidak ada alat pentest di lingkungan ini |
+| Perilaku CSP di peramban nyata | **BLOCKED** | tidak ada peramban headless |
+| Push nyata ke perangkat | **BLOCKED** | tidak ada VAPID/perangkat |
 
 ---
 
@@ -159,11 +179,13 @@ Ringkasan; rincian di [FINDINGS.md F-03](./FINDINGS.md#f-03-p1--dependensi-versi
 | Tahap | `npm audit` (produksi) | Keterangan |
 |---|---|---|
 | Baseline | 2 (1 critical, 1 high) | `next@14.2.15`, `postcss@8.5.31` |
-| Setelah audit | 4 advisory pada `next@14.2.35` | `postcss` bersih |
+| Setelah audit | **25 advisory** pada `next@14.2.35` (3 kritis, 9 tinggi, 11 sedang, 2 rendah); ringkasan `npm audit --omit=dev` = 1 paket | `postcss` bersih |
 
-Perlu dinyatakan jujur: **jumlah advisory naik** setelah kenaikan versi. Penyebabnya
-`npm audit` SemVer-aware — `14.2.15` mengumpulkan seluruh advisory sebagai satu entri,
-sedangkan `14.2.35` menyisakan empat advisory yang **hanya tertambal di 15.5.x/16.x**.
+Perlu dinyatakan jujur: **jumlah advisory tidak turun** setelah kenaikan versi. `npm audit`
+menggabungkan semua advisory `next` dalam satu entri paket, sehingga yang dapat diukur adalah
+advisory per-rentang: **25** rentangnya mencakup `14.2.35`, dan sebagian besar **hanya tertambal
+di 15.5.x/16.x**. (Draf awal audit sempat menulis "4"; itu kekeliruan dari daftar yang terpotong
+dan sudah dikoreksi.)
 Empat yang tersisa tidak dapat dijangkau di aplikasi ini (bukti per advisory di F-03), dan
 penutupan penuhnya menuntut lompatan ke `next@16` yang bersifat *breaking* — diajukan
 sebagai OI-01.
@@ -221,13 +243,13 @@ Keterbatasan yang disadari dan dicatat:
 
 Dinyatakan terang agar tidak terbaca sebagai "aman":
 
-| Area | Alasan | Prosedur verifikasi yang disarankan |
-|---|---|---|
-| Uji penetrasi menyeluruh | Tidak ada alat pentest di lingkungan ini | Jalankan ZAP/`nuclei` terhadap staging |
-| Perilaku CSP di peramban nyata | Tidak ada peramban headless | Buka DevTools → Console di staging, cari pelanggaran CSP pada semua rute + peta + iframe YouTube |
-| Pemindaian dependensi berkelanjutan | Tidak ada CI | Aktifkan Dependabot / `npm audit` di CI |
-| Ketahanan reverse proxy | Di luar repositori | Uji `client_max_body_size`, batas laju, dan TLS di staging |
-| Rotasi rahasia | Tidak ada rahasia yang ditemukan ter-commit, jadi tidak ada yang perlu dirotasi | — |
+| Area | Label | Alasan | Prosedur verifikasi yang disarankan |
+|---|---|---|---|
+| Uji penetrasi menyeluruh | **NOT RUN** | Tidak ada alat pentest di lingkungan ini | Jalankan ZAP/`nuclei` terhadap staging |
+| Perilaku CSP di peramban nyata | **BLOCKED** | Tidak ada peramban headless | Buka DevTools → Console di staging, cari pelanggaran CSP pada semua rute + peta + iframe YouTube |
+| Pemindaian dependensi berkelanjutan | **NOT RUN** | Tidak ada CI | Aktifkan Dependabot / `npm audit` di CI |
+| Ketahanan reverse proxy | **NOT RUN** | Di luar repositori | Uji `client_max_body_size`, batas laju, dan TLS di staging |
+| Rotasi rahasia | **PASS** (tidak berlaku) | Tidak ada rahasia yang ditemukan ter-commit, jadi tidak ada yang perlu dirotasi | — |
 
 Tidak ditemukan kredensial atau kunci privat yang ter-commit. `.env.example` hanya memuat
 nama variabel dan nilai contoh yang tidak sensitif.

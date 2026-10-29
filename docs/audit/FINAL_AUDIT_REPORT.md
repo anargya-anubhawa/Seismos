@@ -227,7 +227,8 @@ Rincian per suite: [TEST_RESULTS.md](./TEST_RESULTS.md).
 
 | Metrik | Sebelum | Sesudah | Sumber |
 |---|---|---|---|
-| `npm audit` produksi | 2 (1 critical, 1 high) | 4 advisory, semuanya tidak dapat dijangkau | `npm audit` |
+| `npm audit` produksi (ringkasan paket) | 2 paket (1 critical, 1 high) | 1 paket (`next`) | `npm audit --omit=dev` |
+| Advisory yang mencakup `next` | 33 | **25** (3 kritis, 9 tinggi, 11 sedang, 2 rendah) | filter `range` vs 14.2.35 |
 | `postcss` | 8.5.31 + 8.4.31 bersarang | 8.5.32 (semua) | `npm ls postcss` |
 | `/_next/image` | `200` (aktif) | `404` | `curl` |
 | Header keamanan | 3 | 7 | `curl -I` |
@@ -237,11 +238,18 @@ Rincian per suite: [TEST_RESULTS.md](./TEST_RESULTS.md).
 | Tes | 102 | 110 | `npm test` |
 | First Load JS beranda | 126 kB | 126 kB (tidak berubah) | `next build` |
 
-Catatan jujur: **jumlah advisory naik** dari 2 menjadi 4. Penyebabnya `npm audit` SemVer-aware:
-`14.2.15` mengumpulkan semuanya jadi satu entri, sedangkan `14.2.35` menyisakan empat yang
-hanya tertambal di 15.5.x/16.x. Empat itu tidak dapat dijangkau di kode ini (bukti per
-advisory di [FINDINGS.md F-03](./FINDINGS.md#f-03-p1--dependensi-versi-rentan-sisa-advisory-tidak-dapat-dijangkau)).
-Jumlah yang naik **bukan** kemunduran keamanan; yang berubah adalah resolusi laporan.
+**Koreksi angka.** Draf pertama bab ini menulis "4 advisory sisa". Angka itu **salah** dan sudah
+diperbaiki setelah diukur ulang: `npm audit` mendaftarkan **25** advisory pada entri `next`, dan
+**25** di antaranya rentangnya mencakup `14.2.35`. Ringkasan `npm audit --omit=dev` (`1 critical`)
+adalah jumlah **paket**, bukan jumlah advisory. Rincian per-advisory dan alasan masing-masing tidak
+dapat dijangkau ada di [FINDINGS.md F-03](./FINDINGS.md#f-03-p1--dependensi-versi-rentan-sisa-advisory-tidak-dapat-dijangkau).
+
+Yang berubah antara `14.2.15` dan `14.2.35` bukan angka advisory, melainkan **keterjangkauan**:
+penambalan 14.2.34/14.2.35 menutup advisory yang memang aktif, dan untuk sisanya kondisi pemicu
+(RCE pada Image Optimization, `rewrites`, `middleware`, Server Actions, Windows) tidak ada di kode
+ini. Risiko sisa yang jujur harus disebut: beberapa advisory **DoS pada React Server Components**
+tidak sepenuhnya dapat dimatikan dari kode aplikasi — itu risiko ketersediaan, bukan RCE atau
+kebocoran data, dan menjadi alasan **OI-01** (Next 16) tetap diajukan.
 
 Ukuran performa lengkap: [PERFORMANCE_AUDIT.md](./PERFORMANCE_AUDIT.md).
 
@@ -297,7 +305,7 @@ geolokasi hanya diminta saat pengguna memintanya.
 
 | # | Hal | Sifat | Tindakan |
 |---|---|---|---|
-| 1 | 4 advisory `next` yang tidak dapat dijangkau | Risiko diterima | Keputusan Anda: **OI-01** (Next 16) |
+| 1 | 25 advisory `next` yang rentangnya mencakup 14.2.35, kondisi pemicunya tidak ada di kode | Risiko diterima (RCE/rewrites/middleware N/A; sisa DoS RSC) | Keputusan Anda: **OI-01** (Next 16) |
 | 2 | 16 butir uji peramban belum dijalankan | **Celah verifikasi** | Wajib di staging sebelum rilis |
 | 3 | F-10 hostname push | Risiko kecil | **OI-02** (S) menutupnya |
 | 4 | Tidak ada CI | Risiko proses | **OI-05** (S) |
@@ -361,7 +369,7 @@ dan push end-to-end — **belum dijalankan** karena lingkungan ini tidak memilik
 perangkat, maupun kunci VAPID. Menyatakan aplikasi `READY` berarti menyatakan area-area itu
 lulus, dan itu tidak benar.
 
-Empat advisory `next` yang tersisa tidak dapat dijangkau di kode ini; risiko itu diterima
+25 advisory `next` yang rentangnya mencakup 14.2.35 tidak dapat dijangkau di kode ini; risiko itu diterima
 secara sadar dan terdokumentasi, dengan penutupan penuh menunggu OI-01.
 
 ### Prasyarat sebelum go-live
@@ -374,3 +382,98 @@ secara sadar dan terdokumentasi, dengan penutupan penuh menunggu OI-01.
    berulang pada rilis berikutnya.
 
 Bila keempat prasyarat terpenuhi dan §2 lulus, rekomendasi naik menjadi `READY`.
+
+---
+
+## 15. Verifikasi akhir (pemeriksaan ulang independen)
+
+Bab ini ditambahkan setelah seluruh perbaikan dikomit (`ea4314a`). Semua pemeriksaan di bawah
+dijalankan **ulang dari nol**: `.next` dan `.data` dihapus, `npm run build` baru, lalu
+`next start` baru. Tujuannya membuktikan bahwa perbaikan bertahan dan tidak ada kemunduran.
+
+### 15a. Diff
+
+| Pemeriksaan | Label | Hasil |
+|---|---|---|
+| Seluruh diff `8ee6d84..ea4314a` ditinjau | **PASS** | 54 berkas, +2.723/−278 |
+| Perubahan tak sengaja | **PASS** | Tidak ada; config hanya memuat perbaikan yang dideklarasikan |
+| Kontrol akses tidak melemah | **PASS** | `authorized()` tetap berjalan setelah `rateLimit()` dan pemeriksaan body pada kedua route monitor |
+
+### 15b. Semua pemeriksaan otomatis diulang
+
+| Pemeriksaan | Label | Hasil |
+|---|---|---|
+| `npm ls --depth=0` | **PASS** | 0 masalah |
+| `npm run lint` | **PASS** | `✔ No ESLint warnings or errors` |
+| `npm run typecheck` | **PASS** | Tanpa keluaran |
+| `npm test` | **PASS** | **110/110 lulus, 0 gagal** |
+| `npm run build` (dari `.next` kosong) | **PASS** | Exit 0, `✓ Compiled successfully`, 74 rute |
+
+### 15c. Perbaikan diverifikasi terhadap sumber, bukan klaim
+
+| Temuan | Label | Bukti di sumber/perilaku |
+|---|---|---|
+| F-01 optimizer mati | **PASS** | `next.config.mjs:16` `unoptimized: true`; `/_next/image` → **404** tanpa **dan** dengan parameter |
+| F-02 header keamanan | **PASS** | 7 header terkirim (`curl -I`) |
+| F-04 redaksi galat | **PASS** | 0 `error.message` mentah di `src/app/api`; uji sumber rusak → `fetch failed` = **0** |
+| F-05 pembatas laju | **PASS** | `429` + `Retry-After` terukur (monitor limit 20, push/test limit 5) |
+| F-06 batas body | **PASS** | `413` pada 5.001 B; body sah tetap `400` (sampai validasi) |
+| F-07 status 502 JSON | **PASS** | MAGMA dirusak → `502` + `application/json` payload lengkap |
+| F-08 tanpa `eslint-disable` | **PASS** | 0 di `src/` dan `scripts/` |
+| F-09 `page.tsx.bak` | **PASS** | Berkas tidak ada di repositori |
+
+### 15d. Fitur pemantauan tetap utuh
+
+Gempa (`204` kejadian, terurut, `id` unik, 5 sumber aktif), gunung api (9 endpoint `200`,
+`ok:true`), cuaca (`satelit`, `peringatan` `200`), tsunami (`200`). Semua **PASS**.
+
+### 15e. Degradasi, izin, dan data basi
+
+Sumber BMKG/MAGMA dirusak: `/api/earthquakes` tetap `200` dengan 194 kejadian dari sumber
+sehat dan pesan `'Sumber data tidak dapat dihubungi'`; `/api/volcano/status` `502` JSON;
+enam halaman utama tetap `200`. Tanpa env VAPID, `/api/volcano/push/config` → `200` dengan kunci
+yang digenerate otomatis ke `.data/` (draf awal keliru menulis `503`; lihat §15f). Payload
+langganan tidak sah → `400`. Monitor dengan rahasia diset → `401/401/200`.
+`StaleDataNotice` dipakai di 5 halaman data. Izin notifikasi ditolak dan langganan kedaluwarsa
+ditangani di kode. Semua **PASS** (atau **PASS (kode)** bila hanya dapat diperiksa di sumber,
+bukan di peramban).
+
+### 15f. Koreksi yang ditemukan pada verifikasi akhir
+
+Dua koreksi dokumentasi dilakukan, **tanpa perubahan kode**:
+
+1. **Jumlah advisory `next`.** Draf sebelumnya menulis 4. Angka yang benar: **25** advisory
+   mencakup `14.2.35` (3 kritis, 9 tinggi, 11 sedang, 2 rendah). Ringkasan
+   `npm audit --omit=dev` (`1 critical`) adalah jumlah **paket**, bukan advisory. Diperbaiki
+   di §8, [FINDINGS.md F-03](./FINDINGS.md), [SECURITY_AUDIT.md](./SECURITY_AUDIT.md),
+   [OPTIONAL_IMPROVEMENTS.md](./OPTIONAL_IMPROVEMENTS.md), dan [TEST_RESULTS.md](./TEST_RESULTS.md).
+   Konsekuensi jujur: sebagian advisory **DoS RSC** tidak sepenuhnya dapat dimatikan dari kode;
+   itu risiko ketersediaan, bukan RCE, dan alasan **OI-01** tetap relevan.
+2. **Label status.** Kelima dokumen kini memakai kosakata seragam **PASS / FAIL / BLOCKED /
+   NOT RUN** (§11, §2, §11 [Security], §1 & §6 [Performance], §1 & §2 [Release checklist]).
+   Butir yang tidak diuji ditandai **BLOCKED**, bukan dianggap lulus.
+
+3. **Perilaku push tanpa env VAPID — salah dilaporkan.** Draf awal menulis
+   `/api/volcano/push/config` → `503` bila `VAPID_*` tidak disetel. Itu **keliru**. Sumber
+   (`src/lib/volcano/push.ts:39-68`) menunjukkan bila env tidak ada, server **menggenerate
+   pasangan kunci dan menyimpannya** di `.data/<app>/vapid.json`. Diukur ulang dalam lingkungan
+   VAPID benar-benar bersih dengan `.data/` kosong: respons `200` + kunci publik, dan
+   `.data/tsunami/vapid.json` terbentuk. `503` hanya muncul bila pembuatan/persistensi kunci
+   gagal (mis. volume tidak dapat ditulis). Teks `"Vapid public key should be 65 bytes long
+   when decoded"` yang membuat saya menyimpulkan `503` berasal dari kegagalan saat startup,
+   bukan alur normal. Semua dokumen sudah dikoreksi.
+
+**Temuan baru dari koreksi ini (F-14, P3).** Kunci VAPID yang **panjangnya wajar tetapi tidak sah
+secara kriptografis** (mis. `"A"×87` / `"B"×43`) lolos `envKeys()` — pemeriksaannya hanya panjang
+(`push.ts:43`) — lalu `web-push` menerimanya di `setVapidDetails` (diuji: tidak melempar galat).
+Akibatnya `/api/volcano/push/config` membalas `200` dengan kunci yang **tidak akan pernah bisa
+memvalidasi** langganan; kerusakan baru terlihat di `sendNotification` (reject, ditangkap, bukan
+crash). Ini bukan regresi rilis: konfigurasi yang benar (`web-push generate-vapid-keys`) tidak
+terdampak, dan risiko sisa adalah salah-konfigurasi operator. **Tidak diperbaiki** karena di luar
+lingkup verifikasi (perbaikan = tambahan validasi), diajukan sebagai OI-13.
+
+### 15g. Kesimpulan verifikasi akhir
+
+**Tidak ada penghalang rilis baru yang ditemukan, dan tidak ada perbaikan yang kemunduran.**
+Rekomendasi di §14 tetap berlaku: **READY WITH CAVEATS** — bukan `READY`, karena 16 butir uji
+peramban/perangkat/push masih **BLOCKED** dan belum dapat dijalankan di lingkungan ini.

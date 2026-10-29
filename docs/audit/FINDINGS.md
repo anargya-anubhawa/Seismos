@@ -4,7 +4,7 @@ Dokumen ini mencatat temuan audit yang **terverifikasi** beserta buktinya. Setia
 yang ditandai *Diperbaiki* sudah punya perubahan kode di repositori dan sudah diuji ulang.
 
 - Tanggal audit: lint/typecheck/tes/build dijalankan pada sesi ini.
-- Basis kode: `main` @ `8ee6d84`.
+- Basis kode: `main` @ `8ee6d84`; perbaikan di `ea4314a`; verifikasi akhir diverifikasi ulang.
 - Lingkungan: Node v24.22.0, npm 11.19.1, Linux.
 
 Klasifikasi prioritas:
@@ -16,6 +16,21 @@ Klasifikasi prioritas:
 | P2 | Masalah performa, kegunaan, pemeliharaan, atau kompatibilitas yang nyata |
 | P3 | Perapian kecil atau peningkatan opsional |
 
+### Kosakata status yang dipakai (seragam di semua dokumen audit)
+
+Setiap temuan dan pemeriksaan memakai salah satu dari empat label ini. Kolom "Status" pada
+ringkasan memakai bahasa biasa (mis. *Diperbaiki*), dan label baku ada di kolom "Label".
+
+| Label | Arti | Padanan status temuan |
+|---|---|---|
+| **PASS** | Sudah diperbaiki dan dibuktikan ulang di sesi ini; bukti tercatat | *Diperbaiki* |
+| **FAIL** | Rusak atau belum tertangani, dan terbukti begitu | *Terbuka* yang belum disetujui perbaikannya |
+| **BLOCKED** | Tidak dapat diuji di lingkungan ini (tanpa peramban/perangkat/kunci VAPID), **bukan** dianggap lulus | — |
+| **NOT RUN** | Sengaja tidak dijalankan (di luar lingkup atau butuh persetujuan) | *Diterima, tercatat* hanya bila memang keputusan menerima risiko |
+
+Temuan yang **diterima sebagai risiko** bukan PASS maupun FAIL: itu keputusan sadar, ditandai
+sebagai *risiko diterima* dan tetap tercantum di [RELEASE_CHECKLIST.md](./RELEASE_CHECKLIST.md).
+
 Dokumen rinci: [SECURITY_AUDIT.md](./SECURITY_AUDIT.md) ·
 [TEST_RESULTS.md](./TEST_RESULTS.md) · [PERFORMANCE_AUDIT.md](./PERFORMANCE_AUDIT.md) ·
 [RELEASE_CHECKLIST.md](./RELEASE_CHECKLIST.md) · [OPTIONAL_IMPROVEMENTS.md](./OPTIONAL_IMPROVEMENTS.md)
@@ -24,26 +39,28 @@ Dokumen rinci: [SECURITY_AUDIT.md](./SECURITY_AUDIT.md) ·
 
 ## Ringkasan temuan
 
-| ID | Prioritas | Kategori | Status |
-|---|---|---|---|
-| F-01 | P0 | Keamanan — RCE Image Optimization (`next@14.2.15`) | **Diperbaiki** |
-| F-02 | P1 | Keamanan — Tidak ada Content-Security-Policy / HSTS | **Diperbaiki** |
-| F-03 | P1 | Keamanan — `next` & `postcss` versi rentan | **Sebagian diperbaiki** (sisa advisory tidak dapat dijangkau) |
-| F-04 | P2 | Keamanan — Pesan galat internal bocor ke klien | **Diperbaiki** |
-| F-05 | P2 | Keamanan — Tidak ada pembatas laju pada endpoint tulis | **Diperbaiki** |
-| F-06 | P2 | Keamanan — Tidak ada batas ukuran body permintaan | **Diperbaiki** |
-| F-07 | P2 | Keandalan — `/api/volcano/status` membalas 500 tanpa body | **Diperbaiki** |
-| F-08 | P2 | Kepatuhan — 7 `eslint-disable` melanggar aturan AGENTS.md | **Diperbaiki** |
-| F-09 | P3 | Kebersihan — `src/app/page.tsx.bak` tertinggal di repositori | **Diperbaiki** |
-| F-10 | P3 | Keamanan — Endpoint langganan push menerima host apa pun | **Terbuka (OI-02)** |
-| F-11 | P3 | Keandalan — Pembatas laju hanya per proses (in-memory) | Diterima, tercatat |
-| F-12 | P3 | Keamanan — CSP memakai `'unsafe-inline'` untuk script | Diterima, tercatat |
+| ID | Prioritas | Kategori | Status | Label |
+|---|---|---|---|---|
+| F-01 | P0 | Keamanan — RCE Image Optimization (`next@14.2.15`) | **Diperbaiki** | **PASS** |
+| F-02 | P1 | Keamanan — Tidak ada Content-Security-Policy / HSTS | **Diperbaiki** | **PASS** |
+| F-03 | P1 | Keamanan — `next` & `postcss` versi rentan | **Sebagian diperbaiki** (25 advisory, pemicu tidak ada) | **PASS dengan risiko diterima** |
+| F-04 | P2 | Keamanan — Pesan galat internal bocor ke klien | **Diperbaiki** | **PASS** |
+| F-05 | P2 | Keamanan — Tidak ada pembatas laju pada endpoint tulis | **Diperbaiki** | **PASS** |
+| F-06 | P2 | Keamanan — Tidak ada batas ukuran body permintaan | **Diperbaiki** | **PASS** |
+| F-07 | P2 | Keandalan — `/api/volcano/status` membalas 500 tanpa body | **Diperbaiki** | **PASS** |
+| F-08 | P2 | Kepatuhan — 7 `eslint-disable` melanggar aturan AGENTS.md | **Diperbaiki** | **PASS** |
+| F-09 | P3 | Kebersihan — `src/app/page.tsx.bak` tertinggal di repositori | **Diperbaiki** | **PASS** |
+| F-10 | P3 | Keamanan — Endpoint langganan push menerima host apa pun | **Terbuka (OI-02)** | **FAIL** (belum diperbaiki, sedang menunggu persetujuan) |
+| F-11 | P3 | Keandalan — Pembatas laju hanya per proses (in-memory) | Diterima, tercatat | **risiko diterima** |
+| F-12 | P3 | Keamanan — CSP memakai `'unsafe-inline'` untuk script | Diterima, tercatat | **risiko diterima** |
+
+F-13 (pemeriksaan push nyata di perangkat) → **BLOCKED**, lihat [RELEASE_CHECKLIST.md §2](./RELEASE_CHECKLIST.md).
 
 ---
 
 ## F-01 (P0) — RCE Image Optimization pada `next@14.2.15`
 
-**Kategori:** Keamanan · **Status:** Diperbaiki
+**Kategori:** Keamanan · **Status:** Diperbaiki · **Label: PASS**
 
 ### Bukti
 
@@ -110,7 +127,7 @@ dan tetap `200`.
 
 ## F-02 (P1) — Tidak ada Content-Security-Policy dan HSTS
 
-**Kategori:** Keamanan · **Status:** Diperbaiki
+**Kategori:** Keamanan · **Status:** Diperbaiki · **Label: PASS**
 
 ### Bukti
 
@@ -189,13 +206,13 @@ pihak pertama. Rincian ada di [SECURITY_AUDIT.md](./SECURITY_AUDIT.md).
 
 ## F-03 (P1) — Dependensi versi rentan; sisa advisory tidak dapat dijangkau
 
-**Kategori:** Keamanan · **Status:** Sebagian diperbaiki
+**Kategori:** Keamanan · **Status:** Sebagian diperbaiki · **Label: PASS dengan risiko diterima**
 
 ### Bukti & penanganan
 
-| Paket | Sebelum | Sesudah | Ausdin |
+| Paket | Sebelum | Sesudah | Advisory yang mencakup versi terpasang |
 |---|---|---|---|
-| `next` | 14.2.15 | 14.2.35 | 33 advisory → 4 |
+| `next` | 14.2.15 | 14.2.35 | **25** advisory (3 kritis, 9 tinggi, 11 sedang, 2 rendah) |
 | `postcss` | 8.5.31 (dan 8.4.31 bersarang) | 8.5.32 | 4 advisory → 0 |
 
 `postcss` hanya dipakai di jalur build. Diperiksa dengan:
@@ -209,22 +226,52 @@ Pemakaiannya hanya di `dist/build/**` (loader CSS, plugin minimizer). Karena itu
 mengubah perilaku runtime. Kenaikan dicapai lewat `overrides` agar salinan `postcss`
 bersarang di dalam `next` ikut tertambal.
 
-### Sisa 4 advisory dan alasan tidak dapat dijangkau
+### Angka advisory yang benar (diukur ulang pada verifikasi akhir)
 
-Setelah kenaikan, `npm audit` masih melaporkan 4 advisory untuk `next`. Advisory itu menempel
-pada paket, tetapi **kondisi pemicunya tidak ada di kode aplikasi**:
+`npm audit` menggabungkan **semua** advisory `next` menjadi satu entri paket, sehingga ringkasan
+`npm audit --omit=dev` menunjukkan `1 critical severity vulnerability` — itu adalah **jumlah paket**,
+bukan jumlah advisory. Hitungan per-advisory diperoleh dengan memfilter setiap `range` terhadap
+versi terpasang (`14.2.35`):
 
-| Advisory | Pemicu | Kondisi di Seismos | Dapat dijangkau? |
+```
+node -e "console.log(require('next/package.json').version)"   → 14.2.35
+total advisory terdaftar (entri 'next')                      → 25
+advisory yang rentangnya mencakup 14.2.35                    → 25
+sebaran severity                                           → 3 kritis, 9 tinggi, 11 sedang, 2 rendah
+metadata npm audit --omit=dev                              → { critical: 1, total: 1 }
+```
+
+> **Koreksi.** Draf audit sebelumnya menulis "4 advisory sisa". Angka itu **salah** — berasal dari
+> membaca daftar advisory yang terpotong. Angka yang benar adalah **25**. Rentang per-advisory
+> dicatat di bawah, dan status kelayakan tetap bergantung pada analisis keterjangkauan, bukan pada
+> angka mentahnya.
+
+### Sisa 25 advisory dan alasan tidak dapat dijangkau
+
+`next@14.2.35` masih berada di dalam rentang 25 advisory. Semuanya menempel pada paket, tetapi
+**kondisi pemicunya tidak ada di kode aplikasi**:
+
+| Advisory (contoh kunci) | Pemicu | Kondisi di Seismos | Dapat dijangkau? |
 |---|---|---|---|
 | `GHSA-2xp9-vwfh-vxw4` (RCE AVIF) | Image Optimization | `images.unoptimized: true`; `/_next/image` → **404** (diuji) | Tidak |
-| `GHSA-2464-fhr4-w9xw` (RCE SVG) | Image Optimization | idem; tidak ada `images.remotePatterns` | Tidak |
+| `GHSA-2464-fhr4-w9xw` (RCE SVG, kritis) | Image Optimization | idem; tidak ada `images.remotePatterns` | Tidak |
+| `GHSA-9g9p-9gw9-jx7f` (DoS optimizer `remotePatterns`) | Image Optimization | idem; `remotePatterns` → **0 hasil** | Tidak |
+| `GHSA-3x4c-7xq6-9pq8` (cache disk optimizer) | Image Optimization | idem | Tidak |
 | `GHSA-p293-qw3h-jr36` (RCE Windows) | Server Windows | Target deploy Linux | Tidak |
 | `GHSA-p3m5-59mp-jv5r` (DoS Server Actions) | Server Actions | `grep -rn "'use server'" src/` → **0 hasil** | Tidak |
+| `GHSA-h25m-26qc-wcjf`, `GHSA-q4gf-8mx6-v5v3`, `GHSA-8h8q-6873-q5fj` (DoS RSC) | RSC berbahaya | Tidak ada permukaan RSC kustom; aplikasi halaman klien + route handler | Tidak (risiko sisa: DoS generik, lihat catatan) |
+| `GHSA-ggv3-7p47-pfv8` (smuggling di `rewrites`) | `rewrites` | `rewrites`/`redirects`/`i18n` → **0 hasil** di config | Tidak |
+| `GHSA-3g8h-86w9-wvmq`, `GHSA-*` cache poisoning middleware | `middleware.ts` | tidak ada `middleware.ts` | Tidak |
+| `GHSA-*` XSS CSP nonce / `beforeInteractive` | nonce / `next/script` | tidak ada nonce (hanya komentar), `beforeInteractive` → **0 hasil** | Tidak |
 
-Bukti pendukung untuk advisory lain yang sudah tertutup oleh 14.2.35: tidak ada
-`middleware.ts` (bypass middleware N/A), tidak ada `rewrites`/`redirects`/`i18n`
-(SSRF rewrites, cache poisoning, smuggling N/A), tidak ada `next/script` `beforeInteractive`
-(XSS beforeInteractive N/A).
+Catatan jujur: sebagian advisory DoS pada React Server Components tidak sepenuhnya bergantung pada
+kode aplikasi — permintaan HTTP apa pun yang diproses runtime Next tetap dapat memicunya. Untuk
+kategori ini tidak ada mitigasi kode yang bisa ditambahkan tanpa menaikkan versi. Karena itu risiko
+yang tersisa adalah **ketersediaan (DoS), bukan eksekusi kode atau kebocoran data**, dan statusnya
+tetap tercatat sebagai risiko diterima hingga **OI-01** (Next 16) dikerjakan.
+
+Bukti pendukung: tidak ada `middleware.ts`, tidak ada `rewrites`/`redirects`/`i18n`, 0 `'use server'`,
+tidak ada custom server, 0 handler `upgrade` WebSocket, 0 `beforeInteractive`, 0 `images.remotePatterns`.
 
 Penutupan penuh hanya tersedia di `next@16.x`, yang merupakan **perubahan besar**
 (React 18 → 19, konfigurasi dan perilaku App Router berubah). Ini melewati batas wewenang
@@ -234,7 +281,7 @@ audit ini, jadi diajukan sebagai **OI-01** untuk keputusan Anda, bukan dikerjaka
 
 ## F-04 (P2) — Pesan galat internal bocor ke klien
 
-**Kategori:** Keamanan · **Status:** Diperbaiki
+**Kategori:** Keamanan · **Status:** Diperbaiki · **Label: PASS**
 
 ### Bukti
 
@@ -307,7 +354,7 @@ sebagai galat.
 
 ## F-05 (P2) — Tidak ada pembatas laju pada endpoint tulis
 
-**Kategori:** Keamanan · **Status:** Diperbaiki
+**Kategori:** Keamanan · **Status:** Diperbaiki · **Label: PASS**
 
 ### Bukti
 
@@ -364,7 +411,7 @@ melewati; jatah terpisah per nama pembatas; jendela kedaluwarsa mengembalikan ja
 
 ## F-06 (P2) — Tidak ada batas ukuran body permintaan
 
-**Kategori:** Keamanan · **Status:** Diperbaiki
+**Kategori:** Keamanan · **Status:** Diperbaiki · **Label: PASS**
 
 ### Bukti
 
@@ -403,7 +450,7 @@ proxy (mis. `client_max_body_size` pada nginx) — tercatat di
 
 ## F-07 (P2) — `/api/volcano/status` membalas 500 tanpa body
 
-**Kategori:** Keandalan · **Status:** Diperbaiki
+**Kategori:** Keandalan · **Status:** Diperbaiki · **Label: PASS**
 
 ### Bukti
 
@@ -454,7 +501,7 @@ kode, bukan asumsi: normalizer BMKG mengembalikan `null` dan tidak pernah melemp
 
 ## F-08 (P2) — `eslint-disable` melanggar aturan proyek
 
-**Kategori:** Kepatuhan · **Status:** Diperbaiki
+**Kategori:** Kepatuhan · **Status:** Diperbaiki · **Label: PASS**
 
 ### Bukti
 
@@ -490,7 +537,7 @@ penonaktifan, dan alasannya tertulis di berkas konfigurasi.
 
 ## F-09 (P3) — `src/app/page.tsx.bak` tertinggal
 
-**Kategori:** Kebersihan · **Status:** Diperbaiki
+**Kategori:** Kebersihan · **Status:** Diperbaiki · **Label: PASS**
 
 `src/app/page.tsx.bak` (6.430 B) adalah cadangan halaman beranda versi lama, tetap terlacak
 Git, dan tidak dirujuk kode mana pun (`grep`). Isinya berbeda dari `page.tsx` aktif. Dihapus
@@ -500,7 +547,7 @@ dengan `git rm`. Tidak ada artefak `.bak`/`.orig`/`.rej` lain di repositori.
 
 ## F-10 (P3) — Endpoint langganan push menerima host apa pun
 
-**Kategori:** Keamanan · **Status:** Terbuka — diajukan sebagai OI-02
+**Kategori:** Keamanan · **Status:** Terbuka — diajukan sebagai OI-02 · **Label: FAIL**
 
 `isValidPushSubscription` (`src/lib/volcano/push.ts:93`) memeriksa protokol `https:` dan
 panjang kunci, tetapi **tidak membatasi** hostname: host mana pun diterima.
@@ -519,7 +566,7 @@ daftar host tidak lengkap — keputusan produk, sehingga diajukan untuk persetuj
 
 ## F-11 (P3) — Pembatas laju hanya per proses
 
-**Kategori:** Keandalan · **Status:** Diterima, tercatat
+**Kategori:** Keandalan · **Status:** Diterima, tercatat · **Label: risiko diterima**
 
 Penghitung F-05 tersimpan di memori proses. Bila aplikasi dijalankan di beberapa instance,
 batas efektif berlipat sebanyak jumlah instance, dan penghitung hilang saat restart. Untuk
@@ -531,7 +578,7 @@ membanjiri endpoint. Bila nanti dijalankan multi-instance, ini perlu penyimpanan
 
 ## F-12 (P3) — CSP memakai `'unsafe-inline'` untuk script
 
-**Kategori:** Keamanan · **Status:** Diterima, tercatat
+**Kategori:** Keamanan · **Status:** Diterima, tercatat · **Label: risiko diterima**
 
 Next.js 14 menyisipkan skrip bootstrap inline, dan aplikasi menaruh skrip tema inline statis
 (`src/app/layout.tsx:42`, konstanta — tidak berasal dari input pengguna, jadi tidak dapat
@@ -541,3 +588,60 @@ Konsekuensinya harus dinyatakan terang: **CSP ini tidak mencegah XSS pihak perta
 sesungguhnya terletak pada `object-src 'none'`, `base-uri 'self'`, `frame-ancestors 'self'`,
 dan `connect-src`/`frame-src` yang tertutup — jalur injeksi eksternal tertutup. Nonce-based
 CSP baru praktis di Next 15+, sehingga tercatat sebagai bagian dari OI-01.
+
+---
+
+## F-13 (P3) — Uji push nyata di perangkat belum dapat dijalankan
+
+**Kategori:** Keandalan · **Status:** Tidak dapat diuji di lingkungan ini · **Label: BLOCKED**
+
+Tidak ada perangkat, peramban, maupun kredensial staging. Alur push end-to-end (daftar
+langganan → kirim → notifikasi muncul saat aplikasi di latar belakang) **tidak** terverifikasi.
+Yang terverifikasi hanya logikanya di sumber (pemangkasan `404`/`410`, redaksi galat, batas
+laju) dan penolakan payload tidak sah (`400`). Prosedur uji ada di
+[RELEASE_CHECKLIST.md §2.10](./RELEASE_CHECKLIST.md).
+
+---
+
+## F-14 (P3) — Kunci VAPID tidak sah lolos pemeriksaan panjang
+
+**Kategori:** Keandalan · **Status:** Terbuka — diajukan sebagai OI-13 · **Label: FAIL**
+
+### Bukti
+
+`src/lib/volcano/push.ts:39-47` memeriksa kunci env **hanya dari panjang**:
+
+```
+if (publicKey.length < 80 || privateKey.length < 40) { … return null; }
+```
+
+Kunci yang panjangnya memadai tetapi **tidak sah secara kriptografis** karena itu diterima.
+Diuji dengan `VAPID_PUBLIC_KEY="A"×87` dan `VAPID_PRIVATE_KEY="B"×43`:
+
+```
+GET /api/volcano/push/config
+→ 200 {"publicKey":"AAAA…","enabled":true}
+```
+
+`web-push` sendiri juga tidak memvalidasi saat `setVapidDetails` (diuji terpisah: tidak melempar
+galat). Kegagalan baru muncul di `sendNotification`, yang menghasilkan promise rejection
+**tertangkap** (bukan crash) — jadi tidak ada dampak ketersediaan.
+
+### Dampak
+
+Terbatas pada salah-konfigurasi operator: server mengiklankan kunci yang tidak dapat
+memvalidasi langganan, sehingga pengguna mendaftar lalu tidak pernah menerima notifikasi, tanpa
+peringatan di `/push/config`. Konfigurasi yang benar (`web-push generate-vapid-keys`) tidak
+terdampak. Bukan regresi dari perbaikan audit ini, dan bukan penghalang rilis.
+
+### Perbaikan yang diajukan (belum dikerjakan)
+
+Validasi 65-byte (publik) dan 32-byte (privat) setelah decode base64url, atau panggil
+`webpush.generateRequestDetails` sebagai uji asap saat startup dan laporkan di `/api/health`.
+Diajukan sebagai **OI-13**, menunggu persetujuan.
+
+**Catatan koreksi terkait.** Draf audit sebelumnya menyatakan `/push/config` membalas `503`
+tanpa env VAPID. Itu **keliru**: tanpa env, kunci **digenerate otomatis** ke `.data/` dan
+responsnya `200`. Sudah dikoreksi di [TEST_RESULTS.md](./TEST_RESULTS.md),
+[RELEASE_CHECKLIST.md](./RELEASE_CHECKLIST.md), dan
+[FINAL_AUDIT_REPORT.md §15f](./FINAL_AUDIT_REPORT.md).

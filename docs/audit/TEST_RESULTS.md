@@ -23,7 +23,7 @@ ditandai **BLOCKED** beserta alasannya, bukan dianggap lulus.
 | 3 | Pemeriksaan tipe | `npm run typecheck` | **PASS** | `tsc --noEmit` tanpa keluaran |
 | 4 | Unit test | `npm test` | **PASS** | **110 tes, 110 lulus, 0 gagal** |
 | 5 | Build produksi | `npm run build` | **PASS** | `✓ Compiled successfully`, exit 0, 74 rute |
-| 6 | Audit dependensi | `npm audit` | **PASS dengan catatan** | 4 advisory sisa, tidak dapat dijangkau (F-03) |
+| 6 | Audit dependensi | `npm audit` | **PASS dengan catatan** | 25 advisory pada `next@14.2.35`, kondisi pemicunya tidak ada di kode; sisa risiko DoS RSC (F-03) |
 | 7 | Uji asap rute (22 halaman) | `curl` ke `next start` | **PASS** | seluruhnya `200` |
 | 8 | Uji API | `curl` | **PASS** | lihat §5 |
 | 9 | Degradasi sumber eksternal | server + URL sumber dirusak | **PASS** | lihat §6 |
@@ -145,7 +145,7 @@ dinyatakan apa adanya.
 | `/api/volcano/status` | `200` | 69 gunung api |
 | `/api/volcano/overview` | `200` | ringkasan konsisten dengan jumlah per level |
 | `/api/weather/satelit` | `200` | katalog produk |
-| `/api/volcano/push/config` | `503` | pesan jelas: kunci VAPID belum disetel (perilaku benar tanpa rahasia) |
+| `/api/volcano/push/config` | `200` | kunci publik tersedia — **termasuk** saat env VAPID kosong (kunci digenerate & disimpan otomatis di `.data/`) |
 
 ### Header keamanan (terverifikasi pada respons nyata)
 
@@ -302,3 +302,113 @@ peramban. Yang benar-benar terbukti di sesi ini:
 
 Yang belum terbukti: tampilan visual, interaksi peramban, pengiriman push nyata, dan
 kinerja lapangan. Hal-hal itu terdaftar sebagai BLOCKED di atas.
+
+---
+
+## 11. Verifikasi akhir (sesi terpisah, ulang dari nol)
+
+Bagian ini mencatat pemeriksaan **ulang** setelah semua perbaikan dikomit (`ea4314a`). Semua
+perintah dijalankan lagi dari kondisi bersih: `.next` dan `.data` dihapus lebih dulu, lalu
+`next build` dan `next start` baru. Tujuannya adalah membuktikan perbaikan bertahan, bukan
+hanya terlihat sekali.
+
+### 11a. Diff dan cakupan perubahan
+
+| Pemeriksaan | Label | Hasil |
+|---|---|---|
+| Diff `8ee6d84..ea4314a` ditinjau seluruhnya | **PASS** | 54 berkas, +2.723/−278; tidak ada perubahan di luar yang dideklarasikan |
+| Diff `next.config.mjs` sesuai klaim | **PASS** | `images.unoptimized: true` + blok `headers()` (CSP/HSTS/COOP/Permissions-Policy) |
+| Diff `.eslintrc.json` sesuai klaim | **PASS** | `no-img-element` dimatikan terpusat dengan alasan tertulis |
+| Diff `package.json` sesuai klaim | **PASS** | `next` 14.2.35, `postcss` 8.5.32 + `overrides`, skrip tes baru |
+| Perubahan tak sengaja | **PASS** | Tidak ditemukan |
+
+### 11b. Pemeriksaan ulang dari nol
+
+| # | Pemeriksaan | Label | Hasil |
+|---|---|---|---|
+| 11.1 | `npm ls --depth=0` | **PASS** | 0 `UNMET`/`extraneous`/`invalid` |
+| 11.2 | `npm run lint` | **PASS** | `✔ No ESLint warnings or errors` |
+| 11.3 | `npm run typecheck` | **PASS** | Tanpa keluaran |
+| 11.4 | `npm test` | **PASS** | **110/110 lulus, 0 gagal** |
+| 11.5 | `npm run build` dari `.next` kosong | **PASS** | `✓ Compiled successfully`, exit 0, **74 rute** |
+| 11.6 | `/_next/image` tanpa parameter | **PASS** | `404` |
+| 11.7 | `/_next/image?url=…&w=64&q=75` | **PASS** | `404` (tidak ada jalur optimizer yang tersisa) |
+| 11.8 | Header keamanan | **PASS** | 7 header terkirim: CSP, HSTS (`max-age=31536000; includeSubDomains`), COOP `same-origin`, Permissions-Policy, X-Frame-Options, X-Content-Type-Options, Referrer-Policy |
+| 11.9 | Aset PWA | **PASS** | `/sw.js` 200, `/manifest.webmanifest` 200, `/icon-192.png` 200 |
+
+### 11c. Fitur pemantauan tetap utuh
+
+| Pemeriksaan | Label | Hasil |
+|---|---|---|
+| `/api/earthquakes` | **PASS** | `200`, **204 kejadian**; terurut menurun (`originTime`), `id` unik |
+| Sumber gempa | **PASS** | 5 sumber aktif: terbaru 1, m5 15, dirasakan 15, felt30 30, live 165 |
+| `/api/volcano/status` | **PASS** | `200`, daftar gunung api terisi |
+| `/api/volcano/{overview,vona,erupsi,gallery,cameras,laporan,krb,health}` | **PASS** | Semuanya `200`, `ok:true` |
+| `/api/weather/{satelit,peringatan}` | **PASS** | `200` |
+| `/api/tsunami` | **PASS** | `200`, `state:"none"` |
+
+### 11d. Jalur gagal, izin, dan data basi
+
+| Pemeriksaan | Label | Hasil |
+|---|---|---|
+| Sumber gempa dirusak (`BMKG_BASE_URL`/`MAGMA_BASE_URL` → `https://127.0.0.1:9/x`) | **PASS** | `/api/earthquakes` → `200` dengan **194 kejadian** dari sumber sehat; sumber gagal memberi pesan `'Sumber data tidak dapat dihubungi'` (bukan pesan internal) |
+| Kebocoran `fetch failed` | **PASS** | `grep -c "fetch failed"` → **0** |
+| `/api/volcano/status` saat MAGMA mati | **PASS** | `502` + `application/json` dengan payload berbentuk lengkap (bukan `500` kosong) |
+| Halaman saat sumber mati | **PASS** | `/`, `/history`, `/statistics`, `/gunung-berapi`, `/gunung-berapi/status`, `/tsunami` → semuanya `200` |
+| Push tanpa env VAPID | **PASS dengan catatan** | `/api/volcano/push/config` → `200` + kunci **digenerate otomatis** ke `.data/`; kunci tidak sah (panjang wajar) juga diterima `200` tanpa peringatan — kegagalan muncul saat kirim |
+| Langganan push tidak sah | **PASS** | `400 {"error":"Langganan push tidak valid"}` |
+| Monitor tanpa rahasia (secret **diset**) | **PASS** | Tanpa auth `401`, rahasia salah `401`, rahasia benar `200` |
+| Stale data di UI | **PASS** (kode) | `StaleDataNotice` dipakai di `page.tsx`, `history`, `map`, `statistics`, `event/[id]`; flag `stale` di `VolcanoOverview.tsx:129` dan `VolcanoSeismogram.tsx:319` |
+| Izin notifikasi ditolak | **PASS** (kode) | `useTsunamiPush.ts:150-156` → pesan dapat ditindaklanjuti; UI menampilkan "Izin ditolak" |
+| Langganan kedaluwarsa | **PASS** (kode) | `404`/`410` → endpoint dipangkas (`volcano/push.ts:244`, `tsunami/push.ts:166`) |
+
+**Catatan yang harus tetap tercatat:** bila `VOLCANO_MONITOR_SECRET`/`TSUNAMI_MONITOR_SECRET`
+**tidak diset**, `authorized()` mengembalikan `true` — ini perilaku lama, bukan kemunduran dari
+perbaikan ini, dan menjadi prasyarat wajib produksi (§3.1 RELEASE_CHECKLIST).
+
+### 11e. Pembatas laju & batas body (diukur langsung)
+
+| Pemeriksaan | Label | Hasil |
+|---|---|---|
+| Monitor (limit 20/menit) | **PASS** | `429` mulai permintaan ke-18 (karena trafik uji sebelumnya pada jendela yang sama) |
+| `push/test` tsunami (limit 5) | **PASS** | `404` ×5 lalu `429` pada permintaan ke-6 |
+| Body 5.001 B ke `push/subscribe` (batas 4.000 B) | **PASS** | `413 {"error":"Body permintaan terlalu besar"}` |
+| Body sah setelah guard | **PASS** | `400` (sampai ke validasi, jadi guard tidak memblokir masukan sah) |
+| Header `Retry-After` | **PASS** | Ada pada respons `429` (contoh tercatat: `retry-after: 596`) |
+
+### 11f. Rahasia, kontrol akses, dan pemeriksaan keamanan
+
+| Pemeriksaan | Label | Hasil |
+|---|---|---|
+| Pola kunci/rahasia di berkas terlacak | **PASS** | `git grep` (private key, `AKIA…`, `ghp_…`, `sk_live_…`, `xox…`) → kosong |
+| `.env` / `.data/` terlacak | **PASS** | Tidak terlacak; keduanya ada di `.gitignore` |
+| Pemeriksaan build dinonaktifkan | **PASS** | `ignoreBuildErrors`/`ignoreDuringBuilds` → tidak ada |
+| `eslint-disable` | **PASS** | 0 |
+| `@ts-ignore`/`@ts-expect-error`/`@ts-nocheck` | **PASS** | 0 |
+| `as any` | **PASS** | 0 |
+| `dangerouslySetInnerHTML` | **PASS** | 1 (skrip tema statis, tanpa masukan pengguna) |
+| Validasi langganan push tidak dilemahkan | **PASS** | `isValidPushSubscription` sama dengan baseline (https wajib, batas panjang, pola base64url) |
+| Auth monitor tidak dilewati guard baru | **PASS** | `authorized()` tetap dijalankan setelah `rateLimit()`/pemeriksaan body |
+
+### 11g. Audit dependensi (koreksi angka)
+
+| Pemeriksaan | Label | Hasil |
+|---|---|---|
+| `npm audit --omit=dev` (ringkasan) | **PASS dengan catatan** | `1 critical severity vulnerability` — ini jumlah **paket** (`next`), bukan jumlah advisory |
+| Advisory yang rentangnya mencakup `14.2.35` | **PASS dengan risiko diterima** | **25** (3 kritis, 9 tinggi, 11 sedang, 2 rendah) |
+| Pemicu advisory ada di kode? | **PASS** | `middleware.ts` tidak ada; `rewrites`/`redirects`/`i18n` tidak ada; `'use server'` 0; custom server tidak ada; `upgrade` 0; `beforeInteractive` 0; `remotePatterns` 0; `nonce` hanya komentar |
+| Sisa risiko yang jujur | **risiko diterima** | Beberapa advisory **DoS pada RSC** tidak dapat dimatikan dari kode; risiko ketersediaan, bukan RCE. Ditutup oleh **OI-01** (Next 16) |
+
+### 11h. Kesimpulan verifikasi akhir
+
+Seluruh butir yang dapat diuji di lingkungan ini **PASS**. Tidak ditemukan kemunduran dari
+perbaikan yang diklaim, tidak ada perubahan tak sengaja pada diff, dan tidak ada rahasia,
+pemeriksaan keamanan yang dinonaktifkan, atau jalur akses yang melemah.
+
+Satu koreksi dokumentasi ditemukan dan diperbaiki pada bagian ini: jumlah advisory `next`
+bukan 4 melainkan **25** (lihat 11g). Koreksi itu tidak mengubah kode maupun status kelayakan
+secara material, tetapi mengubah gambaran risiko yang wajar disampaikan.
+
+Yang masih **BLOCKED**: 16 butir bagian 2 [RELEASE_CHECKLIST.md](./RELEASE_CHECKLIST.md)
+(peramban, perangkat, push nyata, Lighthouse, CSP di konsol). Itu tetap menjadi alasan
+rekomendasi akhir bukan `READY` penuh.
