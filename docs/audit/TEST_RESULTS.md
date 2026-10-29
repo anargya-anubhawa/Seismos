@@ -21,7 +21,7 @@ ditandai **BLOCKED** beserta alasannya, bukan dianggap lulus.
 | 1 | Konsistensi dependensi & lockfile | `npm ls --depth=0` | **PASS** | 19 paket, tanpa `UNMET`/`extraneous`; `package-lock.json` ada (241.745 B) |
 | 2 | Lint | `npm run lint` | **PASS** | `✔ No ESLint warnings or errors` |
 | 3 | Pemeriksaan tipe | `npm run typecheck` | **PASS** | `tsc --noEmit` tanpa keluaran |
-| 4 | Unit test | `npm test` | **PASS** | **110 tes, 110 lulus, 0 gagal** |
+| 4 | Unit test | `npm test` | **PASS** | **121 tes, 121 lulus, 0 gagal** (110 sebelum OI-02/OI-13) |
 | 5 | Build produksi | `npm run build` | **PASS** | `✓ Compiled successfully`, exit 0, 74 rute |
 | 6 | Audit dependensi | `npm audit` | **PASS dengan catatan** | 25 advisory pada `next@14.2.35`, kondisi pemicunya tidak ada di kode; sisa risiko DoS RSC (F-03) |
 | 7 | Uji asap rute (22 halaman) | `curl` ke `next start` | **PASS** | seluruhnya `200` |
@@ -33,6 +33,7 @@ ditandai **BLOCKED** beserta alasannya, bukan dianggap lulus.
 | 13 | Uji visual responsif | — | **BLOCKED** | tidak ada kemampuan tangkapan layar |
 | 14 | Lighthouse / Core Web Vitals lapangan | — | **BLOCKED** | tidak ada Chrome/Lighthouse |
 | 15 | Uji perangkat Android / push asli | — | **BLOCKED** | tidak ada perangkat maupun kunci VAPID |
+| 16 | Uji E2E peramban (Chromium) | `npx playwright test` | **PASS** | **64 uji lulus** (22 rute × 2 viewport), 0 pelanggaran CSP (OI-09) |
 
 ---
 
@@ -412,3 +413,60 @@ secara material, tetapi mengubah gambaran risiko yang wajar disampaikan.
 Yang masih **BLOCKED**: 16 butir bagian 2 [RELEASE_CHECKLIST.md](./RELEASE_CHECKLIST.md)
 (peramban, perangkat, push nyata, Lighthouse, CSP di konsol). Itu tetap menjadi alasan
 rekomendasi akhir bukan `READY` penuh.
+
+---
+
+## 12. Uji E2E peramban (OI-09) — bukti yang sebelumnya tidak ada
+
+Sebelum ini seluruh pemeriksaan hanya lewat HTTP (`curl`). Uji E2E menutup celah itu dengan
+Chromium sungguhan (Playwright 1.64.1) terhadap **build produksi** (`next start`).
+
+### 12a. Konfigurasi
+
+- Dua proyek: `chromium-desktop` (1280×720) dan `chromium-mobile` (Pixel 5, 393×851).
+- Server dijalankan Playwright pada port khusus (`E2E_PORT`, bawaan 3700), bukan dev server.
+- Galat konsol dan pelanggaran CSP dikumpulkan selama setiap navigasi.
+- Kegagalan jaringan ke domain eksternal (sering diblokir di CI) diabaikan; **pelanggaran CSP
+  tidak** diabaikan.
+
+### 12b. Cakupan
+
+| Kelompok uji | Jumlah | Label |
+|---|---|---|
+| 22 rute publik terhidrasi, tanpa galat konsol, `h1` terlihat | 22 × 2 | **PASS** |
+| Tidak ada gulir horizontal pada lebar 360 px | 5 × 2 | **PASS** |
+| Fokus dapat dicapai dengan Tab | 1 × 2 | **PASS** |
+| Badge level gunung api menyertakan teks | 1 × 2 | **PASS** |
+| Halaman baru (OI-03, OI-04, OI-06) | 3 × 2 | **PASS** |
+| **Total** | **64** | **64 lulus, 0 gagal** |
+
+### 12c. Hasil
+
+```
+$ npx playwright test
+  Running 64 tests using 1 worker
+  64 passed (3.4m)
+```
+
+Pelanggaran CSP yang tercatat: **0** pada 22 rute × 2 viewport.
+
+### 12d. Cacat yang ditemukan uji ini
+
+Satu cacat nyata ditemukan dan diperbaiki: **`/gunung-berapi/live-youtube` tidak memiliki
+`h1`**. Halaman itu langsung menampilkan daftar tanpa heading utama, sehingga pembaca layar
+dan navigasi heading tidak menemukan judul halaman. Kini memakai `PageTitle` seperti halaman
+lain.
+
+### 12e. Yang tetap tidak dicakup
+
+Uji ini **tidak** membuktikan:
+
+- push notifikasi nyata (butuh kunci VAPID + perangkat),
+- perilaku di Firefox/Safari (hanya Chromium yang tersedia),
+- Lighthouse / Core Web Vitals,
+- `prefers-reduced-motion`,
+- mode gelap secara visual (tidak ada tangkapan layar dalam keadaan lulus),
+- pemasangan PWA di Android fisik,
+- offline dan pembaruan service worker.
+
+Butir-butir itu tetap **BLOCKED** di [RELEASE_CHECKLIST.md](./RELEASE_CHECKLIST.md) §2.

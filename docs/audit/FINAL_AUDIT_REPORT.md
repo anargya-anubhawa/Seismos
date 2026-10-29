@@ -477,3 +477,78 @@ lingkup verifikasi (perbaikan = tambahan validasi), diajukan sebagai OI-13.
 **Tidak ada penghalang rilis baru yang ditemukan, dan tidak ada perbaikan yang kemunduran.**
 Rekomendasi di §14 tetap berlaku: **READY WITH CAVEATS** — bukan `READY`, karena 16 butir uji
 peramban/perangkat/push masih **BLOCKED** dan belum dapat dijalankan di lingkungan ini.
+
+---
+
+## 16. Implementasi usulan yang disetujui (OI-02, 03, 04, 05, 06, 07, 09, 13)
+
+Delapan usulan yang disetujui pengguna dikerjakan **setelah** verifikasi akhir selesai.
+Bab ini mencatat apa yang berubah dan buktinya. Usulan yang ditunda (OI-01, 08, 10, 11) dan
+yang ditolak (OI-12) **tidak** dikerjakan.
+
+### 16a. Perubahan kode
+
+| OI | Berkas | Sifat |
+|---|---|---|
+| OI-02 | `src/lib/push-endpoint.ts` (baru), `src/lib/{volcano,tsunami}/push.ts` | Allowlist host endpoint push; log host ditolak |
+| OI-13 | `src/lib/push-endpoint.ts` (baru), `src/lib/{volcano,tsunami}/push.ts` | Validasi kriptografis kunci VAPID (65/32 byte, byte `0x04`) |
+| OI-03 | `src/components/ui/DataFreshness.tsx` (baru), `src/app/page.tsx`, `src/app/history/page.tsx` | Indikator kesegaran & per sumber |
+| OI-04 | `src/app/api/health/route.ts` (baru), `src/app/status-sumber/page.tsx` (baru), `src/components/ui/SourceHealth.tsx` (baru) | Halaman status kesehatan sumber |
+| OI-06 | `src/app/privasi/page.tsx` (baru) | Kebijakan privasi, diturunkan dari kode |
+| OI-05 | `.github/workflows/ci.yml` (baru) | CI: lint, typecheck, test, build |
+| OI-09 | `playwright.config.ts`, `e2e/core.spec.ts` (baru) | Uji E2E Chromium |
+| OI-07 | `docs/RELEASE_NOTES.md`, `docs/RUNBOOK.md` (baru) | Catatan rilis + runbook |
+| lain | `src/components/navigation/Shell.tsx` | Menu `/status-sumber` dan `/privasi` |
+| **perbaikan** | `src/components/volcano/VolcanoLiveList.tsx` | **Ditambah `PageTitle`** — halaman ini sebelumnya tidak punya `h1` (cacat aksesibilitas yang ditemukan oleh E2E) |
+
+### 16b. Hasil pemeriksaan setelah implementasi
+
+| Pemeriksaan | Sebelum | Sesudah | Label |
+|---|---|---|---|
+| `npm test` | 110 lulus | **121 lulus, 0 gagal** | **PASS** |
+| `npm run build` | 74 rute | **77 rute** | **PASS** |
+| `npm run lint` | bersih | bersih | **PASS** |
+| `npm run typecheck` | bersih | bersih | **PASS** |
+| Uji peramban | **tidak ada** | **64 uji E2E lulus** (22 rute × 2 viewport) | **PASS** |
+| Pelanggaran CSP di peramban | tidak diketahui | **0** pada 22 rute | **PASS** |
+| Gulir horizontal 360 px | tidak diketahui | **0 px** pada 5 rute | **PASS** |
+| Allowlist host push (8 kasus) | tidak ada | 8/8 sesuai harapan | **PASS** |
+| Kunci VAPID tidak sah | diterima (`200`) | ditolak (`503` + alasan) | **PASS** |
+
+### 16c. Bukti langsung yang dijalankan
+
+```
+npx playwright test            → 64 passed (3.4m), 0 failed
+npm test                       → 121 tests, 121 pass, 0 fail
+npm run build                  → exit 0, ✓ Compiled successfully, 77 rute
+```
+
+Allowlist push diuji terhadap server hidup:
+
+| Endpoint | Hasil |
+|---|---|
+| `fcm.googleapis.com`, `updates.push.services.mozilla.com`, `web.push.apple.com`, `*.notify.windows.com` | `200` |
+| `https://evil.example/x`, `https://fcm.googleapis.com.evil.example/x`, `http://fcm.googleapis.com/x` | `400` |
+| `http://localhost:3000/push` (pengembangan) | `200` |
+
+Kunci VAPID tidak sah (`"A"×87` / `"B"×43`):
+
+```
+GET /api/volcano/push/config → 503 {"enabled":false,"error":"kunci publik VAPID bukan titik P-256 tanpa kompresi"}
+```
+
+### 16d. Dampak pada rekomendasi rilis
+
+Alasan utama rekomendasi sebelumnya **bukan** `READY` adalah tidak adanya uji peramban sama
+sekali: 16 butir dinyatakan BLOCKED. Setelah OI-09, **6 dari 16 butir itu kini lulus dengan
+Chromium sungguhan** (CSP, peta, halaman siaran, responsif 360 px, fokus Tab, status bukan
+hanya warna).
+
+**Sepuluh butir tetap BLOCKED** dan tidak boleh dianggap lulus: bukti visual per rute + mode
+gelap, `prefers-reduced-motion`, Lighthouse, push nyata ke perangkat, izin notifikasi ditolak
+di peramban, offline, geolokasi ditolak, pembaruan service worker, pemasangan PWA di Android,
+dan peramban lain (Firefox/Safari).
+
+Rekomendasi di §14 **tidak berubah**: **READY WITH CAVEATS**. Kemajuan ini memperkecil risiko
+secara nyata, tetapi belum cukup untuk `READY` penuh — dan menyebutnya `READY` berarti
+mengklaim butir yang masih belum diuji.

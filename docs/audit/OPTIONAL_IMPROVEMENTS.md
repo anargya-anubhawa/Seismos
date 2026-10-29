@@ -17,23 +17,45 @@ Skala usaha: **S** (jam), **M** (1–2 hari), **L** (3–5 hari), **XL** (>1 min
 
 ---
 
+## Status implementasi
+
+Delapan usulan yang disetujui pengguna **sudah diimplementasikan** pada rilis ini:
+
+| ID | Hasil |
+|---|---|
+| OI-02 | Allowlist host push di `src/lib/push-endpoint.ts`, dipakai kedua jalur. 8 kasus diuji langsung terhadap server. |
+| OI-03 | Komponen `DataFreshness` di beranda & riwayat: waktu ambil, umur data, lencana "data lama", status per sumber. |
+| OI-04 | `/api/health` (8 sumber, 4 grup) + halaman `/status-sumber` dengan tombol periksa ulang. |
+| OI-05 | `.github/workflows/ci.yml`: lint, typecheck, test, build; `npm audit` sebagai laporan. |
+| OI-06 | Halaman `/privasi`, diturunkan dari kode (lokasi tidak disimpan, tanpa analitik, cara berhenti berlangganan). |
+| OI-07 | `docs/RELEASE_NOTES.md` dan `docs/RUNBOOK.md`. |
+| OI-09 | Playwright: 22 rute × 2 viewport + gulir horizontal + fokus + halaman baru. **64 uji lulus, 0 pelanggaran CSP.** |
+| OI-13 | `validateVapidKeys()`: 65/32 byte + byte `0x04`. Kunci salah → `503` dengan alasan jelas. |
+
+Belum dikerjakan (sesuai keputusan): OI-01, OI-08, OI-10, OI-11 (ditunda), OI-12 (ditolak).
+
+Tes unit naik dari **110 → 121** (11 tes baru untuk OI-02 & OI-13). Rute naik dari **74 → 77**
+(`/privasi`, `/status-sumber`, `/api/health`).
+
+---
+
 ## Ringkasan
 
-| ID | Nama | Usaha | Risiko | Sebelum rilis? | Rekomendasi |
-|---|---|---|---|---|---|
+| ID | Nama | Usaha | Risiko | Sebelum rilis? | Rekomendasi | Status |
+|---|---|---|---|---|---|---|
 | OI-01 | Naik ke Next.js 16 (menutup 25 advisory sisa) | XL | Tinggi | Tidak | **Tunda** ke rilis berikutnya |
-| OI-02 | Allowlist host langganan push | S | Rendah | Tidak | **Setujui** — murah, menutup F-10 |
-| OI-03 | Indikator kesegaran & atribusi data | S | Rendah | Tidak | **Setujui** |
-| OI-04 | Halaman status kesehatan sumber | S | Rendah | Tidak | **Setujui** |
-| OI-05 | CI yang menjalankan keempat pemeriksaan | S | Rendah | **Ya** | **Setujui** — prioritas tertinggi |
-| OI-06 | Halaman kebijakan privasi | S | Rendah | Tidak | **Setujui** |
-| OI-07 | Catatan rilis + runbook operasional | S | Rendah | Tidak | **Setujui** |
+| OI-02 | Allowlist host langganan push | S | Rendah | Tidak | **Setujui** — murah, menutup F-10 | **SELESAI** |
+| OI-03 | Indikator kesegaran & atribusi data | S | Rendah | Tidak | **Setujui** | **SELESAI** |
+| OI-04 | Halaman status kesehatan sumber | S | Rendah | Tidak | **Setujui** | **SELESAI** |
+| OI-05 | CI yang menjalankan keempat pemeriksaan | S | Rendah | **Ya** | **Setujui** — prioritas tertinggi | **SELESAI** |
+| OI-06 | Halaman kebijakan privasi | S | Rendah | Tidak | **Setujui** | **SELESAI** |
+| OI-07 | Catatan rilis + runbook operasional | S | Rendah | Tidak | **Setujui** | **SELESAI** |
 | OI-08 | Pembatas laju berbasis penyimpanan bersama | M | Sedang | Tidak | **Tunda** sampai multi-instance |
-| OI-09 | Uji E2E Playwright | M | Rendah | Tidak | **Setujui** |
+| OI-09 | Uji E2E Playwright | M | Rendah | Tidak | **Setujui** | **SELESAI** |
 | OI-10 | Pemberitahuan pembaruan PWA | M | Sedang | Tidak | **Tunda** |
 | OI-11 | Pemantauan galat yang menghormati privasi | M | Sedang | Tidak | **Tunda** |
 | OI-12 | Ukuran citra proxy MAGMA | M | Sedang | Tidak | **Tolak** (lihat alasan) |
-| OI-13 | Validasi kriptografis kunci VAPID (65/32 byte + uji asap) | S | Rendah | Tidak | **Setujui** — menutup F-14 |
+| OI-13 | Validasi kriptografis kunci VAPID (65/32 byte + uji asap) | S | Rendah | Tidak | **Setujui** — menutup F-14 | **SELESAI** |
 
 ---
 

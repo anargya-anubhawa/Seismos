@@ -50,7 +50,8 @@ Dokumen rinci: [SECURITY_AUDIT.md](./SECURITY_AUDIT.md) ·
 | F-07 | P2 | Keandalan — `/api/volcano/status` membalas 500 tanpa body | **Diperbaiki** | **PASS** |
 | F-08 | P2 | Kepatuhan — 7 `eslint-disable` melanggar aturan AGENTS.md | **Diperbaiki** | **PASS** |
 | F-09 | P3 | Kebersihan — `src/app/page.tsx.bak` tertinggal di repositori | **Diperbaiki** | **PASS** |
-| F-10 | P3 | Keamanan — Endpoint langganan push menerima host apa pun | **Terbuka (OI-02)** | **FAIL** (belum diperbaiki, sedang menunggu persetujuan) |
+| F-10 | P3 | Keamanan — Endpoint langganan push menerima host apa pun | **Diperbaiki** (OI-02) | **PASS** |
+| F-14 | P3 | Keandalan — Kunci VAPID tidak sah lolos pemeriksaan panjang | **Diperbaiki** (OI-13) | **PASS** |
 | F-11 | P3 | Keandalan — Pembatas laju hanya per proses (in-memory) | Diterima, tercatat | **risiko diterima** |
 | F-12 | P3 | Keamanan — CSP memakai `'unsafe-inline'` untuk script | Diterima, tercatat | **risiko diterima** |
 
@@ -547,7 +548,7 @@ dengan `git rm`. Tidak ada artefak `.bak`/`.orig`/`.rej` lain di repositori.
 
 ## F-10 (P3) — Endpoint langganan push menerima host apa pun
 
-**Kategori:** Keamanan · **Status:** Terbuka — diajukan sebagai OI-02 · **Label: FAIL**
+**Kategori:** Keamanan · **Status:** Diperbaiki (OI-02) · **Label: PASS**
 
 `isValidPushSubscription` (`src/lib/volcano/push.ts:93`) memeriksa protokol `https:` dan
 panjang kunci, tetapi **tidak membatasi** hostname: host mana pun diterima.
@@ -561,6 +562,25 @@ Sisa risikonya kecil: penyimpanan langganan dapat diisi entri dengan host arbitr
 kemudian ikut diproses saat pengiriman massal. Perbaikan yang mungkin adalah allowlist host
 push (FCM, Mozilla, WNS, Apple). Tidak dikerjakan karena dapat memblokir peramban sah bila
 daftar host tidak lengkap — keputusan produk, sehingga diajukan untuk persetujuan Anda.
+
+### Penyelesaian (OI-02, sudah diimplementasikan)
+
+Allowlist host dipindahkan ke modul bersama `src/lib/push-endpoint.ts` dan dipakai kedua
+jalur push (gunung api & tsunami). Diuji langsung terhadap server:
+
+| Endpoint | Hasil |
+|---|---|
+| `https://fcm.googleapis.com/…` | `200` diterima |
+| `https://updates.push.services.mozilla.com/…` | `200` diterima |
+| `https://web.push.apple.com/…` | `200` diterima |
+| `https://wns2-abc.notify.windows.com/…` | `200` diterima |
+| `https://localhost:3000/…` | `200` diterima (pengembangan) |
+| `https://evil.example/x` | `400` ditolak |
+| `https://fcm.googleapis.com.evil.example/x` | `400` ditolak |
+| `http://fcm.googleapis.com/x` | `400` ditolak |
+
+Host yang ditolak dicatat ke log server (`console.warn`) agar entri baru mudah ditambahkan.
+11 tes regresi di `scripts/test-push-endpoint.ts`.
 
 ---
 
@@ -605,7 +625,7 @@ laju) dan penolakan payload tidak sah (`400`). Prosedur uji ada di
 
 ## F-14 (P3) — Kunci VAPID tidak sah lolos pemeriksaan panjang
 
-**Kategori:** Keandalan · **Status:** Terbuka — diajukan sebagai OI-13 · **Label: FAIL**
+**Kategori:** Keandalan · **Status:** Diperbaiki (OI-13) · **Label: PASS**
 
 ### Bukti
 
@@ -645,3 +665,27 @@ tanpa env VAPID. Itu **keliru**: tanpa env, kunci **digenerate otomatis** ke `.d
 responsnya `200`. Sudah dikoreksi di [TEST_RESULTS.md](./TEST_RESULTS.md),
 [RELEASE_CHECKLIST.md](./RELEASE_CHECKLIST.md), dan
 [FINAL_AUDIT_REPORT.md §15f](./FINAL_AUDIT_REPORT.md).
+
+### Penyelesaian (OI-13, sudah diimplementasikan)
+
+`validateVapidKeys()` di `src/lib/push-endpoint.ts` kini memeriksa:
+
+1. base64url yang sah;
+2. kunci publik **65 byte** dan byte pertama `0x04` (titik P-256 tanpa kompresi);
+3. kunci privat **32 byte**.
+
+Dipanggil dari `envKeys()` pada kedua jalur push. Kunci yang tidak sah **tidak dipakai**
+dan tidak diganti diam-diam dengan kunci tersimpan — sebagai gantinya galat dicatat di
+log dan `/api/volcano/push/config` membalas `503` dengan alasan yang jelas.
+
+Diuji langsung terhadap server dengan kunci `"A"×87` / `"B"×43` (kasus yang dulu lolos):
+
+```
+GET /api/volcano/push/config
+→ 503 {"enabled":false,"error":"kunci publik VAPID bukan titik P-256 tanpa kompresi"}
+log: [volcano] kunci publik VAPID bukan titik P-256 tanpa kompresi; periksa VAPID_PUBLIC_KEY/VAPID_PRIVATE_KEY.
+berkas .data/*/vapid.json terbentuk: 0 (kunci salah tidak dipakai)
+```
+
+Tanpa env VAPID sama sekali, perilaku lama dipertahankan: kunci digenerate otomatis dan
+`/push/config` membalas `200`. 11 tes regresi di `scripts/test-push-endpoint.ts`.

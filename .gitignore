@@ -6,3 +6,9 @@ next-env.d.ts
 *.tsbuildinfo
 .opencode
 .data/
+
+# Artefak uji E2E (OI-09)
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/

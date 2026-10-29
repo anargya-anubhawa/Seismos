@@ -9,6 +9,7 @@ import { fmtAgo, fmtTime } from '@/lib/formatting';
 import {
   Attribution, EventRow, LoadingNotice, MagBadge, PageTitle, Panel, Skeleton, StaleDataNotice, StateBox,
 } from '@/components/ui/common';
+import { DataFreshness } from '@/components/ui/DataFreshness';
 import { NotificationSummary } from '@/components/notifications/NotificationSettings';
 import { QuakeMapLazy } from '@/components/map/QuakeMapLazy';
 import { MmiSummary } from '@/components/mmi/MmiSummary';
@@ -55,6 +56,20 @@ export default function DashboardPage() {
         hint="Ringkasan satu layar: cuaca di lokasi Anda, kejadian yang perlu perhatian (letusan gunung api, tsunami, peringatan cuaca ekstrem), lalu gempa terbaru. Semua angka berasal dari sumber resmi BMKG/PVMBG."
       />
       <StaleDataNotice error={error} updatedAt={data.updatedAt} />
+      <DataFreshness
+        updatedAt={data.updatedAt}
+        stale={data.sources.some((src) => src.stale)}
+        sources={data.sources.map((src) => ({
+          id: src.id,
+          label: src.label,
+          fetchedAt: src.fetchedAt,
+          stale: src.stale,
+          error: src.error,
+          count: src.count,
+        }))}
+        label="Data gempa diambil"
+        className="mb-4"
+      />
 
       {/*
         Kartu cuaca mendapat kolom tetap yang nyaman dibaca, sedangkan panel

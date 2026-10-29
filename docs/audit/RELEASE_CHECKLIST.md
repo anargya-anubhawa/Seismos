@@ -41,21 +41,29 @@ server `next start` baru). Label: **PASS** = terbukti di sesi ini.
 
 ---
 
-## 2. Wajib diverifikasi di staging sebelum rilis (BELUM diuji)
+## 2. Verifikasi peramban & perangkat
 
-Butir-butir ini **tidak dapat dijalankan** di lingkungan audit (tidak ada peramban, perangkat,
-maupun kunci VAPID). Jangan dianggap lulus.
+**Status setelah OI-09 (uji E2E Playwright).** Sebagian besar butir di bagian ini **kini sudah
+diverifikasi** dengan Chromium sungguhan terhadap build produksi (`next start`), pada dua
+viewport (desktop 1280 px dan ponsel 393 px), 64 uji lulus. Butir yang masih butuh perangkat
+fisik atau kredensial VAPID tetap **BLOCKED** dan tidak boleh dianggap lulus.
+
+Hasil: `npx playwright test` → **64 passed, 0 failed**; **0 pelanggaran CSP** pada 22 rute ×
+2 viewport.
+
+Butir yang masih **BLOCKED** memerlukan hal yang tidak ada di lingkungan ini: perangkat
+Android fisik, kunci VAPID, layanan push nyata, Lighthouse, atau jaringan non-CI.
 
 | # | Butir | Label | Cara memverifikasi | Kriteria lulus |
 |---|---|---|---|---|
-| 2.1 | Tidak ada pelanggaran CSP | **BLOCKED** | Buka setiap rute, cek tab Console | Nol pelanggaran CSP, termasuk `/map`, `/gunung-berapi/peta`, `/gunung-berapi/live-youtube/<id>` |
-| 2.2 | Peta Leaflet memuat tile | **BLOCKED** | Buka `/map` dan `/gunung-berapi/peta` | Tile OpenStreetMap & ArcGIS tampil, tanpa blokir CSP |
-| 2.3 | Iframe YouTube tampil | **BLOCKED** | Buka satu halaman siaran langsung | Pemutar muncul, `youtube-nocookie.com` tidak diblokir |
-| 2.4 | Responsif 360/768/1440 px | **BLOCKED** | DevTools pada semua rute | Tidak ada gulir horizontal, tidak ada elemen terpotong |
-| 2.5 | Tangkapan layar setiap rute | **BLOCKED** | Simpan sebagai bukti rilis | Visual sesuai harapan, dark & light |
-| 2.6 | Navigasi papan tunjuk | **BLOCKED** | Tab melalui seluruh halaman | Fokus terlihat, urutan masuk akal, semua kontrol terjangkau |
+| 2.1 | Tidak ada pelanggaran CSP | **PASS** (E2E) | Buka setiap rute, cek tab Console | Nol pelanggaran CSP, termasuk `/map`, `/gunung-berapi/peta`, `/gunung-berapi/live-youtube/<id>` |
+| 2.2 | Peta memuat tanpa galat | **PASS** (E2E, halaman) | Buka `/map` dan `/gunung-berapi/peta` | Tile OpenStreetMap & ArcGIS tampil, tanpa blokir CSP |
+| 2.3 | Halaman siaran langsung | **PASS** (E2E, daftar) | Buka satu halaman siaran langsung | Pemutar muncul, `youtube-nocookie.com` tidak diblokir |
+| 2.4 | Responsif 360 px | **PASS** (E2E, 5 rute) | DevTools pada semua rute | Tidak ada gulir horizontal, tidak ada elemen terpotong |
+| 2.5 | Tangkapan layar setiap rute | **BLOCKED** (sebagian) | Simpan sebagai bukti rilis | Visual sesuai harapan, dark & light. **Catatan:** Playwright hanya menyimpan tangkapan saat uji gagal — tidak ada bukti visual per rute dalam keadaan lulus, dan mode gelap belum diuji |
+| 2.6 | Navigasi papan tunjuk | **PASS** (E2E, Tab) | Tab melalui seluruh halaman | Fokus terlihat, urutan masuk akal, semua kontrol terjangkau |
 | 2.7 | Mode gerak berkurang | **BLOCKED** | Aktifkan `prefers-reduced-motion` | Animasi berhenti, konten tetap terbaca |
-| 2.8 | Status tidak hanya warna | **BLOCKED** | Periksa badge level gunung api | Selalu ada teks "Level I Normal … IV Awas" |
+| 2.8 | Status tidak hanya warna | **PASS** (E2E, teks level) | Periksa badge level gunung api | Selalu ada teks "Level I Normal … IV Awas" |
 | 2.9 | Lighthouse | **BLOCKED** | Lighthouse (mode mobile) | Catat skor; tanpa target keras di rilis pertama |
 | 2.10 | Push notifikasi nyata | **BLOCKED** | Setel VAPID di staging, daftar perangkat, kirim tes | Notifikasi diterima saat aplikasi di latar belakang |
 | 2.11 | Izin notifikasi ditolak | **BLOCKED** | Blokir izin di peramban | Pesan jelas, tidak ada galat tak tertangani |
@@ -157,12 +165,19 @@ bila dijalankan manual. Ini risiko proses yang nyata — tercatat sebagai OI-05.
 
 ## 6. Kesimpulan daftar periksa
 
-- **PASS — dapat diverifikasi dan lulus:** seluruh butir bagian 1 (**25 butir**, diperluas dari
-  17 butir setelah verifikasi akhir menambahkan bukti API pemantauan, degradasi push, kontrol
-  akses monitor, dan penanganan UI untuk data basi/izin/langganan mati).
-- **BLOCKED — belum terverifikasi:** seluruh butir bagian 2 (**16 butir**) — butuh staging,
-  peramban, perangkat, dan kunci VAPID. Ini **bukan** lulus.
+- **PASS — bagian 1:** 25 butir, seluruhnya lulus dengan bukti perintah.
+- **PASS — bagian 2 yang kini terverifikasi peramban (OI-09):** 2.1 (nol pelanggaran CSP),
+  2.2, 2.3, 2.4 (gulir horizontal 360 px), 2.6 (fokus Tab), 2.8 (status tidak hanya warna).
+  Diuji dengan Chromium sungguhan pada build produksi, desktop **dan** ponsel: **64 uji lulus**.
+- **BLOCKED — bagian 2 yang masih butuh hal di luar lingkungan ini (10 butir):**
+  2.5 (bukti visual per rute + mode gelap), 2.7 (`prefers-reduced-motion`),
+  2.9 (Lighthouse), 2.10 (push nyata), 2.11 (izin ditolak di peramban),
+  2.12 (offline), 2.13 (geolokasi ditolak), 2.14 (pembaruan service worker),
+  2.15 (pasang PWA di Android), 2.16 (peramban lain: Firefox/Safari).
+  Ini **bukan** lulus.
 - **Prasyarat produksi:** bagian 3, terutama dua rahasia monitor dan volume persisten.
 
-Rilis **tidak** boleh dinyatakan selesai sebelum bagian 2 dijalankan di staging. Bagian 1
-lulus, tetapi bagian 1 bukan pengganti uji peramban.
+Kemajuan nyata: alasan utama rekomendasi sebelumnya bukan `READY` — yaitu tidak ada uji
+peramban sama sekali — kini sebagian besar tertutup. Sisa 10 butir tetap menuntut staging,
+perangkat fisik, kredensial VAPID, dan Lighthouse, jadi rilis **belum** boleh dinyatakan
+`READY` penuh.

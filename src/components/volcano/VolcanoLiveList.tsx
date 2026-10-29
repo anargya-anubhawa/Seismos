@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { ExternalLink, Play, Youtube } from 'lucide-react';
-import { Panel } from '@/components/ui/common';
+import { PageTitle, Panel } from '@/components/ui/common';
 import { LIVE_STREAMS, liveStreamThumbnail, liveStreamUrl } from '@/lib/volcano/live';
 import type { VolcanoLiveStream } from '@/lib/volcano/live';
 import { Disclaimer } from './layout';
@@ -32,6 +32,13 @@ export function VolcanoLiveList() {
 
   return (
     <div className="min-w-0">
+      {/* Setiap halaman lain memakai PageTitle; tanpa ini halaman siaran
+          langsung kehilangan heading utama untuk pembaca layar dan navigasi. */}
+      <PageTitle
+        title="Live YouTube Gunung Api"
+        hint="Siaran langsung pemantauan gunung api Indonesia dari kanal Badan Geologi dan penyedia lain. Thumbnail dimuat di sini; video baru diputar setelah Anda membuka halaman siaran."
+      />
+
       <div className="mb-4 rounded-lg border border-line bg-surface px-3 py-2.5 text-xs">
         <p className="flex items-start gap-2">
           <Youtube size={14} aria-hidden className="mt-0.5 shrink-0 text-[#CC0000] dark:text-[#FF6B6B]" />

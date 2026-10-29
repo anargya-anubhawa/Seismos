@@ -1,5 +1,6 @@
 import * as webpush from 'web-push';
 import type { TsunamiAlert, TsunamiPushConfig, TsunamiPushSubscriptionInput } from '@/types/tsunami';
+import { describeRejectedPushEndpoint, validateVapidKeys } from '../push-endpoint';
 import type { TsunamiNotificationKind } from './identity';
 import { buildTsunamiPushPayload } from './push-payload';
 import {
@@ -15,14 +16,18 @@ let vapidPromise: Promise<StoredVapidKeys> | null = null;
 const testTimes = new Map<string, number>();
 
 function envKeys(): { publicKey: string; privateKey: string } | null {
-  const publicKey = (process.env.VAPID_PUBLIC_KEY ?? process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? '').trim();
-  const privateKey = (process.env.VAPID_PRIVATE_KEY ?? '').trim();
-  if (!publicKey || !privateKey) return null;
-  if (publicKey.length < 80 || privateKey.length < 40) {
-    console.error('[tsunami] VAPID_PUBLIC_KEY/VAPID_PRIVATE_KEY tidak tampak valid; memakai kunci tersimpan.');
-    return null;
+  const publicKey = process.env.VAPID_PUBLIC_KEY ?? process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+  const privateKey = process.env.VAPID_PRIVATE_KEY;
+  if (!(publicKey ?? '').trim() || !(privateKey ?? '').trim()) return null;
+  const validated = validateVapidKeys(publicKey, privateKey);
+  if ('error' in validated) {
+    // Kunci env tidak sah: jangan dipakai dan jangan diiklankan ke klien.
+    // Menggantinya diam-diam dengan kunci tersimpan membuat pengguna mendaftar
+    // ke kunci yang salah tanpa tahu. Lihat F-14 / OI-13.
+    console.error(`[tsunami] ${validated.error}; periksa VAPID_PUBLIC_KEY/VAPID_PRIVATE_KEY.`);
+    throw new Error(validated.error);
   }
-  return { publicKey, privateKey };
+  return validated;
 }
 
 async function persistGeneratedVapid(): Promise<StoredVapidKeys> {
@@ -69,10 +74,13 @@ export function isValidPushSubscription(value: unknown): value is TsunamiPushSub
   if (!value || typeof value !== 'object') return false;
   const subscription = value as Partial<TsunamiPushSubscriptionInput>;
   if (typeof subscription.endpoint !== 'string' || subscription.endpoint.length > 2048) return false;
-  let url: URL;
-  try { url = new URL(subscription.endpoint); } catch { return false; }
-  const localhost = url.hostname === 'localhost' || url.hostname === '127.0.0.1' || url.hostname === '[::1]';
-  if (url.protocol !== 'https:' && !(url.protocol === 'http:' && localhost)) return false;
+  // Host dibatasi ke layanan push sah (OI-02, menutup F-10). Localhost tetap
+  // diizinkan untuk pengembangan.
+  const rejected = describeRejectedPushEndpoint(subscription.endpoint);
+  if (rejected) {
+    console.warn(`[tsunami] langganan push ditolak: ${rejected}`);
+    return false;
+  }
   if (!subscription.keys || typeof subscription.keys !== 'object') return false;
   const { p256dh, auth } = subscription.keys;
   if (typeof p256dh !== 'string' || p256dh.length < 20 || p256dh.length > 512) return false;

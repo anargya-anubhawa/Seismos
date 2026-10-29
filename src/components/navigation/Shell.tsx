@@ -6,7 +6,7 @@ import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import {
   Activity, BarChart3, Bell, Camera, ChevronDown, CloudSun, FileText, Flame, History, Image as ImageIcon,
   Info, LayoutDashboard, Map, Menu, Moon, Mountain, Play, Radio, RefreshCw, Satellite, Search, Send, Settings,
-  ShieldAlert, Sun, TriangleAlert, Waves, X,
+  ShieldAlert, ShieldCheck, Sun, TriangleAlert, Waves, X,
 } from 'lucide-react';
 import { useEarthquakes } from '@/hooks/useEarthquakes';
 import { fmtClock } from '@/lib/formatting';
@@ -87,6 +87,8 @@ const GROUP_LAINNYA: NavGroup = {
   icon: Info,
   items: [
     { href: '/settings', label: 'Pengaturan', short: 'Setelan', icon: Settings },
+    { href: '/status-sumber', label: 'Status Sumber Data', short: 'Status', icon: ShieldCheck },
+    { href: '/privasi', label: 'Kebijakan Privasi', short: 'Privasi', icon: ShieldAlert },
     { href: '/about', label: 'Tentang Seismos Indonesia', short: 'Tentang', icon: Info },
   ],
 };

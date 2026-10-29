@@ -10,6 +10,7 @@ import { fmtTime, wibDate } from '@/lib/formatting';
 import {
   Attribution, EventRow, LoadingNotice, MagBadge, MmiBadge, PageTitle, Skeleton, StaleDataNotice, StateBox,
 } from '@/components/ui/common';
+import { DataFreshness } from '@/components/ui/DataFreshness';
 import { CopyLinkButton } from '@/components/share/ShareActions';
 import { CopyMiniReport } from '@/components/share/CopyMiniReport';
 import { earthquakeReportText } from '@/lib/share/report-text';
@@ -99,6 +100,16 @@ function HistoryInner() {
         <CopyLinkButton />
       </div>
       <StaleDataNotice error={error} updatedAt={data.updatedAt} />
+      <DataFreshness
+        updatedAt={data.updatedAt}
+        stale={data.sources.some((src) => src.stale)}
+        sources={data.sources.map((src) => ({
+          id: src.id, label: src.label, fetchedAt: src.fetchedAt,
+          stale: src.stale, error: src.error, count: src.count,
+        }))}
+        label="Data gempa diambil"
+        className="mb-4"
+      />
 
       <div className="grid gap-3 rounded-lg border border-line bg-surface p-4 sm:grid-cols-2 lg:grid-cols-4">
         <label className="text-sm lg:col-span-2"><span className="mb-1 block text-muted">Lokasi</span>
