@@ -15,7 +15,7 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "test": "sucrase-node scripts/test-felt.ts && sucrase-node scripts/test-sources.ts && sucrase-node scripts/test-alerts.ts && sucrase-node scripts/test-provinces.ts && sucrase-node scripts/test-audio.ts && sucrase-node scripts/test-tsunami.ts && sucrase-node scripts/test-volcano.ts && sucrase-node scripts/test-share.ts && sucrase-node scripts/test-weather.ts && sucrase-node scripts/test-live.ts && sucrase-node scripts/test-public-error.ts && sucrase-node scripts/test-rate-limit.ts && sucrase-node scripts/test-push-endpoint.ts",
+    "test": "sucrase-node scripts/test-felt.ts && sucrase-node scripts/test-sources.ts && sucrase-node scripts/test-alerts.ts && sucrase-node scripts/test-provinces.ts && sucrase-node scripts/test-audio.ts && sucrase-node scripts/test-tsunami.ts && sucrase-node scripts/test-volcano.ts && sucrase-node scripts/test-share.ts && sucrase-node scripts/test-weather.ts && sucrase-node scripts/test-live.ts && sucrase-node scripts/test-public-error.ts && sucrase-node scripts/test-rate-limit.ts && sucrase-node scripts/test-push-endpoint.ts && sucrase-node scripts/test-quake.ts && sucrase-node scripts/test-quake-fcm.ts && sucrase-node scripts/test-quake-store.ts",
     "test:e2e": "playwright test",
     "test:e2e:desktop": "playwright test --project=chromium-desktop"
   },

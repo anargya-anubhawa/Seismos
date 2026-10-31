@@ -12,3 +12,6 @@ next-env.d.ts
 /playwright-report/
 /blob-report/
 /playwright/.cache/
+
+*-service-account.json
+seismos-fcm-sa.json

@@ -18,4 +18,12 @@ export async function register(): Promise<void> {
   } catch (error) {
     console.error(`[volcano] pemantau gagal dimulai: ${error instanceof Error ? error.message : String(error)}`);
   }
+  try {
+    // Pemantau gempa + FCM. Berbeda dari dua di atas: ini mengirim push ke perangkat
+    // Android, sebuah kemampuan yang tidak dimiliki web. Lihat docs/STAGE_5_PUSH_CONTRACT.md.
+    const { startQuakeMonitor } = await import('@/lib/quake/monitor');
+    startQuakeMonitor();
+  } catch (error) {
+    console.error(`[quake] pemantau gagal dimulai: ${error instanceof Error ? error.message : String(error)}`);
+  }
 }

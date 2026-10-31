@@ -35,6 +35,8 @@ const nextConfig = {
       config.plugins.push(new webpack.NormalModuleReplacementPlugin(/^@\/lib\/tsunami\/monitor$/, tsunamiStub));
       const volcanoStub = path.join(dir, 'src/lib/volcano/monitor.edge.ts');
       config.plugins.push(new webpack.NormalModuleReplacementPlugin(/^@\/lib\/volcano\/monitor$/, volcanoStub));
+      const quakeStub = path.join(dir, 'src/lib/quake/monitor.edge.ts');
+      config.plugins.push(new webpack.NormalModuleReplacementPlugin(/^@\/lib\/quake\/monitor$/, quakeStub));
     }
     return config;
   },
